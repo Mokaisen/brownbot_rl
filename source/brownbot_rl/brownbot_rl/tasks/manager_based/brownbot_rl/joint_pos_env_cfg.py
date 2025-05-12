@@ -88,12 +88,12 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlSceneCfg):
         )
 
         self.scene.ee_frame = FrameTransformerCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/UR5/UR5/base_link",
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/ur5/base_link",
             debug_vis=False,
             visualizer_cfg=marker_cfg,
             target_frames=[
                 FrameTransformerCfg.FrameCfg(
-                    prim_path="{ENV_REGEX_NS}/Robot/UR5/UR5/Robotiq_2F_140/robotiq_base_link",
+                    prim_path="{ENV_REGEX_NS}/Robot/UR5/UR5/Robotiq_2F_140_physics_edit/robotiq_base_link",
                     name="end_effector",
                     offset=OffsetCfg(
                         pos=[0.0, 0.0, 0.1334],
