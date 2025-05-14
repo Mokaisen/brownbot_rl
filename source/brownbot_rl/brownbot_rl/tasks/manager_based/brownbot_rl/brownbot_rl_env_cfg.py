@@ -139,30 +139,21 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    reaching_object = RewTerm(func=mdp.object_ee_distance, params={"std": 1.0}, weight=1.0)
+    reaching_object = RewTerm(func=mdp.object_ee_distance, params={"std": 1.0}, weight=3.6)
 
-    lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.04}, weight=7.0)
+    #lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.04}, weight=7.0)
 
-    object_goal_tracking = RewTerm(
-        func=mdp.object_goal_distance,
-        params={"std": 0.3, "minimal_height": 0.04, "command_name": "object_pose"},
-        weight=7.0,
-    )
+    # object_goal_tracking = RewTerm(
+    #     func=mdp.object_goal_distance,
+    #     params={"std": 0.3, "minimal_height": 0.04, "command_name": "object_pose"},
+    #     weight=7.0,
+    # )
 
-    object_goal_tracking_fine_grained = RewTerm(
-        func=mdp.object_goal_distance,
-        params={"std": 0.05, "minimal_height": 0.04, "command_name": "object_pose"},
-        weight=5.0,
-    )
-
-    gripper_orientation_alignment = RewTerm(
-        func=mdp.orientation_alignment,
-        weight=1.0,
-        params={
-            "object_cfg": SceneEntityCfg("object"),
-            "ee_frame_cfg": SceneEntityCfg("ee_frame"),
-        }
-    )
+    # object_goal_tracking_fine_grained = RewTerm(
+    #     func=mdp.object_goal_distance,
+    #     params={"std": 0.05, "minimal_height": 0.04, "command_name": "object_pose"},
+    #     weight=5.0,
+    # )
 
     # action penalty
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1e-1)
@@ -185,7 +176,7 @@ class TerminationsCfg:
     )
 
     excessive_velocity = DoneTerm(
-        func=mdp.joint_velocity_exceeded, params={"velocity_threshold": 60.0, "asset_cfg": SceneEntityCfg("robot")}
+        func=mdp.joint_velocity_exceeded, params={"velocity_threshold": 120.0, "asset_cfg": SceneEntityCfg("robot")}
     )
 
 @configclass
