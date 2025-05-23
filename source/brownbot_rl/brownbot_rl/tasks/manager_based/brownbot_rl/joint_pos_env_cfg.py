@@ -14,6 +14,8 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab_tasks.manager_based.manipulation.lift import mdp
 from isaaclab_tasks.manager_based.manipulation.lift.lift_env_cfg import LiftEnvCfg
 
+from isaaclab.sensors import ContactSensorCfg
+
 ##
 # Pre-defined configs
 ##
@@ -45,8 +47,8 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
         self.actions.gripper_action = mdp.BinaryJointPositionActionCfg(
             asset_name="robot",
             joint_names=["finger_joint"],
-            open_command_expr={"finger_joint": 0.0},
-            close_command_expr={"finger_joint": 0.53},
+            open_command_expr={"finger_joint": 0.0}, #0.0
+            close_command_expr={"finger_joint": 0.63}, #0.53
         )
         # Set the body name for the end effector
         self.commands.object_pose.body_name = "robotiq_base_link"
@@ -96,10 +98,27 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
                     prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/robotiq_base_link",
                     name="end_effector",
                     offset=OffsetCfg(
-                        pos=[0.0, 0.0, 0.1334],
+                        pos=[0.0, 0.0, 0.1734],
                     ),
                 ),
             ],
+        )
+
+        # add contact sensor to the gripper of the robot
+        self.scene.contact_forces_LF = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_inner_finger",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False,
+            filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
+        )
+
+        self.scene.contact_forces_RF = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_inner_finger",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False,
+            filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
         )
 
 
