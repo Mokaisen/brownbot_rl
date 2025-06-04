@@ -48,7 +48,7 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
             asset_name="robot",
             joint_names=["finger_joint"],
             open_command_expr={"finger_joint": 0.0}, #0.0
-            close_command_expr={"finger_joint": 0.63}, #0.53
+            close_command_expr={"finger_joint": 0.57}, #0.53
         )
         # Set the body name for the end effector
         self.commands.object_pose.body_name = "robotiq_base_link"
@@ -98,7 +98,7 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
                     prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/robotiq_base_link",
                     name="end_effector",
                     offset=OffsetCfg(
-                        pos=[0.0, 0.0, 0.1734],
+                        pos=[0.0, 0.0, 0.2134],
                     ),
                 ),
             ],
@@ -106,7 +106,7 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
 
         # add contact sensor to the gripper of the robot
         self.scene.contact_forces_LF = ContactSensorCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_inner_finger",
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_inner_pad", #left_inner_pad
             update_period=0.0,
             history_length=6,
             debug_vis=False,
@@ -114,7 +114,7 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
         )
 
         self.scene.contact_forces_RF = ContactSensorCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_inner_finger",
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_inner_pad", #right_inner_pad
             update_period=0.0,
             history_length=6,
             debug_vis=False,

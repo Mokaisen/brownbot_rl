@@ -150,15 +150,28 @@ class RewardsCfg:
     # Penalize closing when far from the object
     penalize_closing_far = RewTerm(
         func=mdp.penalize_closing_when_far,
-        params={"min_distance": 0.17, "gripper_action_name": "gripper_action"},
+        params={"min_distance": 0.09, "gripper_action_name": "gripper_action"},
         weight=7.0,  # this weight will multiply the internal -1.0 returned by the function
+    )
+
+    # Penalize opening when near from the object
+    # penalize_opening_near = RewTerm(
+    #     func=mdp.penalize_opening_when_near,
+    #     params={"min_distance": 0.056, "gripper_action_name": "gripper_action"},
+    #     weight=7.0,  # this weight will multiply the internal -1.0 returned by the function
+    # )
+
+    # penalize action rate only in the gripper
+    penalty_action_rate_gripper = RewTerm(
+        func=mdp.gripper_action_rate_l2,
+        weight=-9.0
     )
 
     # Reward for closing the gripper near the object
     reward_closing_near = RewTerm(
         func=mdp.reward_closing_when_near,
         params={"min_distance": 0.056, "gripper_action_name": "gripper_action"},
-        weight=7.0,
+        weight=9.0,
     )
 
     # Reward for having contact with the object and the gripper
@@ -169,29 +182,29 @@ class RewardsCfg:
             "left_sensor_name": "contact_forces_LF",
             "right_sensor_name": "contact_forces_RF",
         },
-        weight=3.0  # adjust this weight based on reward scaling
+        weight=30.0  # adjust this weight based on reward scaling
     )
 
     being_far_penalty = RewTerm(func=mdp.penalty_for_being_far,
                                 params={"threshold": 0.29},
                                 weight=7.0)  # Weight is applied inside the function
 
-    lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.04}, weight=7.0)
+    lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.04}, weight=30.0)
 
     object_goal_tracking = RewTerm(
         func=mdp.object_goal_distance,
         params={"std": 0.3, "minimal_height": 0.04, "command_name": "object_pose"},
-        weight=7.0,
+        weight=30.0,
     )
 
     object_goal_tracking_fine_grained = RewTerm(
         func=mdp.object_goal_distance,
         params={"std": 0.05, "minimal_height": 0.04, "command_name": "object_pose"},
-        weight=5.0,
+        weight=30.0,
     )
 
     # action penalty
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1e-1)
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1e-1) #-1e-1
 
     joint_vel = RewTerm(
         func=mdp.joint_vel_l2,
@@ -255,11 +268,15 @@ class BrownbotRlEnvCfg(ManagerBasedRLEnvCfg):
         self.decimation = 2
         self.episode_length_s = 5.0
         # simulation settings
-        self.sim.dt = 0.01  # 100Hz
+        self.sim.dt = 0.01  # 100Hz  0.01
         self.sim.render_interval = self.decimation
 
-        self.sim.physx.bounce_threshold_velocity = 0.2
+        #self.sim.physx.bounce_threshold_velocity = 0.2
         self.sim.physx.bounce_threshold_velocity = 0.01
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
+
+        # added for the contact sensors to handle 4096 environments
+        # the error recommends at least 170648
+        self.sim.physx.gpu_max_rigid_patch_count = 200000

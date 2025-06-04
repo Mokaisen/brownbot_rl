@@ -173,6 +173,9 @@ def main():
     # reset environment
     obs, _ = env.reset()
     timestep = 0
+
+    #keep gripper closed
+    gripper_locked_closed = False
     # simulate environment
     while simulation_app.is_running():
         start_time = time.time()
@@ -187,8 +190,29 @@ def main():
             # - single-agent (deterministic) actions
             else:
                 actions = outputs[-1].get("mean_actions", outputs[0])
+            #print(actions)
+
+            # # extract gripper action (assumes gripper is last dimension)
+            # gripper_action = actions[..., -1]  # shape: (num_envs,)
+
+            # # Check for first negative value to trigger the lock
+            # if not gripper_locked_closed and (gripper_action < 0).any():
+            #     gripper_locked_closed = True
+            #     print("🔒 Gripper locked CLOSED.")
+
+            # # If locked, override gripper action to stay negative
+            # if gripper_locked_closed:
+            #     actions[..., -1] = -1.0  # or another negative value as desired
+
+
             # env stepping
             obs, _, _, _, _ = env.step(actions)
+            # obs, _, terminated, truncated, _ = env.step(actions)
+
+            # if terminated[0] or truncated[0]:
+            #     gripper_locked_closed = False
+            #     print("🔄 Environment reset — gripper unlocked.")
+
         if args_cli.video:
             timestep += 1
             # exit the play loop after recording one video

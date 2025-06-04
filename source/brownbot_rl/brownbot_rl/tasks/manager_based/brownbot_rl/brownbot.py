@@ -20,15 +20,15 @@ from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 BROWNBOT05_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/brownbot_05.usd",
+        usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/brownbot_07.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             max_depenetration_velocity=5.0,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=True,  # Default to False, adjust if needed
-            solver_position_iteration_count=8,
-            solver_velocity_iteration_count=0,
+            solver_position_iteration_count=12, # 8
+            solver_velocity_iteration_count=4, # 0
         ),
         activate_contact_sensors=True,
     ),
@@ -89,9 +89,51 @@ BROWNBOT05_CFG = ArticulationCfg(
         "arm_06": ImplicitActuatorCfg(
             joint_names_expr=["finger_joint"],
             velocity_limit=0.2, #1.220
-            effort_limit=10.0,
-            stiffness=0.1125, #300
-            damping=0.001, #30
+            effort_limit=10.0, #10
+            stiffness=30.125, #0.1125
+            damping=0.3, #0.001
+        ),
+        "arm_07": ImplicitActuatorCfg(
+            joint_names_expr=["left_outer_finger_joint"],
+            velocity_limit=0.2, #1.220
+            effort_limit=3.0, #1.0
+            stiffness=0.5, #0.02
+            damping=0.1, #0.001
+        ),
+        "arm_08": ImplicitActuatorCfg(
+            joint_names_expr=["right_outer_finger_joint"],
+            velocity_limit=0.2, #1.220
+            effort_limit=3.0, #1.0
+            stiffness=0.5, #0.02
+            damping=0.1, #0.001
+        ),
+        "arm_09": ImplicitActuatorCfg(
+            joint_names_expr=["left_inner_finger_joint"],
+            velocity_limit=0.2, #1.220
+            effort_limit=3.0, #1.0
+            stiffness=0.5, #0.002
+            damping=0.1, #0.0001
+        ),
+        "arm_10": ImplicitActuatorCfg(
+            joint_names_expr=["right_inner_finger_joint"],
+            velocity_limit=0.2, #1.220
+            effort_limit=3.0, #1.0
+            stiffness=0.5, #0.002
+            damping=0.1, #0.0001
+        ),
+        "arm_12": ImplicitActuatorCfg(
+            joint_names_expr=["left_inner_finger_pad_joint"],
+            velocity_limit=0.2, #1.220
+            effort_limit=3.0, #1.0
+            stiffness=0.5, #0.002
+            damping=0.1, #0.0001
+        ),
+        "arm_13": ImplicitActuatorCfg(
+            joint_names_expr=["right_inner_finger_pad_joint"],
+            velocity_limit=0.2, #1.220
+            effort_limit=3.0, #1.0
+            stiffness=0.5, #0.002
+            damping=0.1, #0.0001
         ),
     },
     # Using default soft limits

@@ -52,13 +52,25 @@ def main():
     print(f"[INFO]: Gym action space: {env.action_space}")
     # reset environment
     env.reset()
+
+    joint_stiffness = env.scene["robot"].data.joint_stiffness
+    joint_names = env.scene["robot"].data.joint_names
+    print(f"joint stiffness: {joint_stiffness}")
+    print(f"joint names: {joint_names}")
+
+    # for joint in env.scene["robot"].actuators["arm_06"].joints:
+    #     if "finger" in joint.name:
+    #         print(f"{joint.name}: stiffness={joint.drive.stiffness}, damping={joint.drive.damping}")
+
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
             # sample actions from -1 to 1
             actions = 2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
-            actions[0,-1] = -1.0
+            #actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
+            #actions[0,4] = -360.0
+            #actions[0,-1] = -1.0
             # apply actions
             env.step(actions)
 

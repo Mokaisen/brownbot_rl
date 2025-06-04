@@ -125,6 +125,61 @@ def penalize_closing_when_far(
 
     return penalty_res
 
+def penalize_opening_when_near(
+    env: ManagerBasedRLEnv,
+    min_distance: float = 0.05,  # threshold distance to consider "near"
+    gripper_action_name: str = "gripper_action",
+    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
+) -> torch.Tensor:
+    """Penalize the agent for opening the gripper when near from the object."""
+    # get object and EE positions
+    object: RigidObject = env.scene[object_cfg.name]
+    ee_frame: FrameTransformer = env.scene[ee_frame_cfg.name]
+    cube_pos = object.data.root_pos_w  # (num_envs, 3)
+    ee_pos = ee_frame.data.target_pos_w[..., 0, :]  # (num_envs, 3)
+
+    # compute distance
+    distance = torch.norm(cube_pos - ee_pos, dim=1)  # (num_envs,)
+    is_near = distance < min_distance  # (num_envs,)
+    # get the class of gripper action from the environment
+    #gripper_term = env.action_manager.get_term(gripper_action_name)
+    #print(type(gripper_term))
+
+    # get gripper action (assume binary action in shape (num_envs, 1))
+    gripper_action = env.action_manager.get_term(gripper_action_name).processed_actions.squeeze(-1)
+    #print("gripper action: ", gripper_action)
+
+    # previous action 
+    total_prev_action = env.action_manager.prev_action
+    gripper_action_prev = total_prev_action[:,-1]
+
+    # detect opening transition 
+    was_closed = gripper_action_prev < 0
+    is_opening = gripper_action < 0.5
+    opening_transition = was_closed & is_opening
+
+    # Apply penalty only when near the object
+    penalty_mask = opening_transition & is_near
+    penalty = penalty_mask.float() * -1.0
+
+    # print("gripper_action_prev:", gripper_action_prev)
+    # print("gripper_action:", gripper_action)
+    # print("penalty:", penalty)
+    # print("###########################")
+
+    # # Define threshold for "closing" — adjust if needed
+    # is_opening = gripper_action < 0.5
+    # is_far = distance < min_distance
+
+    # # Penalize if the agent is trying to close the gripper while far from the object
+    # penalty = is_opening & is_far  # boolean mask
+
+    # penalty_res = penalty.float() * -1.0  # Apply -1.0 penalty where condition is met
+    # #print("penalty_res: ", penalty_res)
+
+    return penalty
+
 def reward_closing_when_near(
     env: ManagerBasedRLEnv,
     min_distance: float = 0.05,
@@ -175,22 +230,35 @@ def reward_double_contact_on_grasp(
     #print("left_force_norm: ", left_force_norm)
     #print("right_force_norm: ", right_force_norm)
 
-    # Compute contact status per finger (True if force norm > threshold)
-    left_has_contact = left_force_norm > contact_threshold  # shape: [num_envs]
-    right_has_contact = right_force_norm > contact_threshold
+    # # Compute contact status per finger (True if force norm > threshold)
+    # left_has_contact = left_force_norm > contact_threshold  # shape: [num_envs]
+    # right_has_contact = right_force_norm > contact_threshold
 
     #print("left_has_contact: ", left_has_contact)
     #print("right_has_contact: ", right_has_contact)
 
-    both_contact = left_has_contact & right_has_contact
-    single_contact = (left_has_contact ^ right_has_contact)  # XOR: only one finger has contact
+    # both_contact = left_has_contact & right_has_contact
+    # single_contact = (left_has_contact ^ right_has_contact)  # XOR: only one finger has contact
 
-    reward = torch.zeros_like(left_has_contact, dtype=torch.float32)
-    reward[single_contact] = 1.0
-    reward[both_contact] = 2.0
+    # reward = torch.zeros_like(left_has_contact, dtype=torch.float32)
+    # reward[single_contact] = 1.0
+    # reward[both_contact] = 2.0
     #reward = reward.unsqueeze(-1)
 
     #print("reward shape: ", reward.shape)
     #print("reward: ", reward)
 
+    # reward = left_force_norm + right_force_norm
+    reward = torch.clamp(left_force_norm + right_force_norm, max=3.0)
+    #print("reward: ", reward)
+
     return reward  # (num_envs,)
+
+def gripper_action_rate_l2(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalize the rate of change of the gripper action using L2 squared kernel."""
+    # Assuming gripper action is last dimension
+    gripper_curr = env.action_manager.action[..., -1]
+    gripper_prev = env.action_manager.prev_action[..., -1]
+    reward = torch.square(gripper_curr - gripper_prev)
+    #print(f"penalty action rate: {reward}")
+    return reward
