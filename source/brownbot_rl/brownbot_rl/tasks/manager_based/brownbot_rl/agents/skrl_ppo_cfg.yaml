@@ -67,7 +67,7 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "brownbot_lift"
-    experiment_name: "curriculum_close_gripper"
+    experiment_name: "scale_down_weights"
     write_interval: auto
     checkpoint_interval: auto
 

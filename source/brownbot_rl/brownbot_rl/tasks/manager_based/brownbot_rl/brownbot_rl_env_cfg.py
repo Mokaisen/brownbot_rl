@@ -145,7 +145,7 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    reaching_object = RewTerm(func=mdp.object_ee_distance, params={"std": 1.0}, weight=1.6)
+    reaching_object = RewTerm(func=mdp.object_ee_distance, params={"std": 1.0}, weight=3.0)
 
     # Penalize closing when far from the object
     penalize_closing_far = RewTerm(
@@ -171,7 +171,7 @@ class RewardsCfg:
     reward_closing_near = RewTerm(
         func=mdp.reward_closing_when_near,
         params={"min_distance": 0.056, "gripper_action_name": "gripper_action"},
-        weight=5.0,
+        weight=2.0,
     )
 
     # Reward for having contact with the object and the gripper
@@ -182,7 +182,7 @@ class RewardsCfg:
             "left_sensor_name": "contact_forces_LF",
             "right_sensor_name": "contact_forces_RF",
         },
-        weight=30.0  # adjust this weight based on reward scaling
+        weight=10.0  # adjust this weight based on reward scaling
     )
 
     being_far_penalty = RewTerm(func=mdp.penalty_for_being_far,
@@ -191,7 +191,7 @@ class RewardsCfg:
 
     lifting_object = RewTerm(func=mdp.object_is_lifted, 
                              params={"minimal_height": 0.04}, 
-                             weight=30.0)
+                             weight=10.0)
 
     # object_goal_tracking = RewTerm(
     #     func=mdp.object_goal_distance,
@@ -207,7 +207,7 @@ class RewardsCfg:
 
     object_goal_smooth = RewTerm(
         func=mdp.object_goal_distance_smooth,
-        params={"std":0.2, "command_name": "object_pose"},
+        params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.04},
         weight=1.0
     )
 
@@ -249,7 +249,7 @@ class CurriculumCfg:
 
     reward_closing_near = CurrTerm(
         func=mdp.modify_reward_weight,
-        params={ "term_name": "reward_closing_near", "weight": 30, "num_steps": 20000},
+        params={ "term_name": "reward_closing_near", "weight": 10.0, "num_steps": 20000},
     )
 
 

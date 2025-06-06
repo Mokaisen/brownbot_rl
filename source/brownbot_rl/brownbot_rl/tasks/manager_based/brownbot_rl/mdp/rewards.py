@@ -55,10 +55,10 @@ def object_ee_distance(
     reward_distance = torch.exp(-(object_ee_distance / 0.2))
     # print(f"object ee distance: {object_ee_distance}")
 
-    reward_distance += (object_ee_distance < 0.27) * 1.5
-    reward_distance += (object_ee_distance < 0.15) * 3.0
-    reward_distance += (object_ee_distance < 0.08) * 5.0
-    reward_distance += (object_ee_distance < 0.02) * 8.0
+    #reward_distance += (object_ee_distance < 0.27) * 1.5
+    #reward_distance += (object_ee_distance < 0.15) * 3.0
+    #reward_distance += (object_ee_distance < 0.08) * 5.0
+    #reward_distance += (object_ee_distance < 0.02) * 8.0
     #print(f"REWARD ee distance: {reward_distance}")
 
     # Velocity penalty when close to the object
@@ -92,6 +92,7 @@ def object_goal_distance_smooth(
     env: ManagerBasedRLEnv,
     std: float,
     command_name: str,
+    minimal_height: float,
     robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
 ) -> torch.Tensor:
@@ -120,13 +121,13 @@ def object_goal_distance_smooth(
     #print(f"reward: {reward}")
 
     # Add bonus reward tiers for being very close to the goal
-    reward += (object_goal_dist < 0.25) * 1.0
-    reward += (object_goal_dist < 0.15) * 2.0
-    reward += (object_goal_dist < 0.08) * 4.0
-    reward += (object_goal_dist < 0.02) * 6.0
+    # reward += (object_goal_dist < 0.25) * 1.0
+    # reward += (object_goal_dist < 0.15) * 2.0
+    # reward += (object_goal_dist < 0.08) * 4.0
+    # reward += (object_goal_dist < 0.02) * 6.0
     #print(f"reward weighted: {reward}")
 
-    return reward
+    return (object.data.root_pos_w[:, 2] > minimal_height) * reward
 
 def penalize_closing_when_far(
     env: ManagerBasedRLEnv,
