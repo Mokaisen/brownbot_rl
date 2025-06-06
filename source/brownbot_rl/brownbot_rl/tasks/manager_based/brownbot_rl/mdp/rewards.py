@@ -88,6 +88,46 @@ def object_goal_distance(
     # rewarded if the object is lifted above the threshold
     return (object.data.root_pos_w[:, 2] > minimal_height) * (1 - torch.tanh(distance / std))
 
+def object_goal_distance_smooth(
+    env: ManagerBasedRLEnv,
+    std: float,
+    command_name: str,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+) -> torch.Tensor:
+    """Reward the agent based on how close the object is to the goal position using smooth exponential + bonus thresholds."""
+    object: RigidObject = env.scene[object_cfg.name]
+    command = env.command_manager.get_command(command_name)
+    robot: RigidObject = env.scene[robot_cfg.name]
+
+    # Final desired goal position in world frame (x, y, z)
+    goal_pos_b = command[:, :3]  # shape: (num_envs, 3)
+    goal_pos_w, _ = combine_frame_transforms(
+        robot.data.root_state_w[:, :3],  # robot position
+        robot.data.root_state_w[:, 3:7],  # robot orientation (quaternion)
+        goal_pos_b
+    )
+
+    # Current object position in world frame
+    object_pos_w = object.data.root_pos_w[:, :3]
+
+    # Euclidean distance from object to goal: (num_envs,)
+    object_goal_dist = torch.norm(object_pos_w - goal_pos_w, dim=1)
+    #print(f"object goal distance: {object_goal_dist}")
+
+    # Smooth reward based on distance
+    reward = torch.exp(-(object_goal_dist / std))
+    #print(f"reward: {reward}")
+
+    # Add bonus reward tiers for being very close to the goal
+    reward += (object_goal_dist < 0.25) * 1.0
+    reward += (object_goal_dist < 0.15) * 2.0
+    reward += (object_goal_dist < 0.08) * 4.0
+    reward += (object_goal_dist < 0.02) * 6.0
+    #print(f"reward weighted: {reward}")
+
+    return reward
+
 def penalize_closing_when_far(
     env: ManagerBasedRLEnv,
     min_distance: float = 0.10,  # threshold distance to consider "near"

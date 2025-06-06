@@ -67,7 +67,7 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "brownbot_lift"
-    experiment_name: "contact_sensor_added"
+    experiment_name: "curriculum_close_gripper"
     write_interval: auto
     checkpoint_interval: auto
 
@@ -76,5 +76,5 @@ agent:
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 648000
+  timesteps: 72000
   environment_info: log
