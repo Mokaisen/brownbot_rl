@@ -171,7 +171,7 @@ class RewardsCfg:
     reward_closing_near = RewTerm(
         func=mdp.reward_closing_when_near,
         params={"min_distance": 0.056, "gripper_action_name": "gripper_action"},
-        weight=2.0,
+        weight=10.0,
     )
 
     # Reward for having contact with the object and the gripper
@@ -208,7 +208,7 @@ class RewardsCfg:
     object_goal_smooth = RewTerm(
         func=mdp.object_goal_distance_smooth,
         params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.04},
-        weight=1.0
+        weight=10.0
     )
 
     # action penalty
@@ -273,7 +273,7 @@ class BrownbotRlEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     events: EventCfg = EventCfg()
-    curriculum: CurriculumCfg = CurriculumCfg()
+    # curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
         """Post initialization."""

@@ -42,7 +42,7 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
                          "wrist_1_joint",
                          "wrist_2_joint",
                          "wrist_3_joint"], 
-            scale=0.04, use_default_offset=True
+            scale=0.3, use_default_offset=True
         )
         self.actions.gripper_action = mdp.BinaryJointPositionActionCfg(
             asset_name="robot",
