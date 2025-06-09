@@ -182,7 +182,7 @@ class RewardsCfg:
             "left_sensor_name": "contact_forces_LF",
             "right_sensor_name": "contact_forces_RF",
         },
-        weight=10.0  # adjust this weight based on reward scaling
+        weight=1.5  # adjust this weight based on reward scaling
     )
 
     being_far_penalty = RewTerm(func=mdp.penalty_for_being_far,
