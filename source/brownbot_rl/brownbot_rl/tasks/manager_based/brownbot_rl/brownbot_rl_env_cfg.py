@@ -164,7 +164,7 @@ class RewardsCfg:
     # penalize action rate only in the gripper
     penalty_action_rate_gripper = RewTerm(
         func=mdp.gripper_action_rate_l2,
-        weight=-9.0
+        weight=-1.0 #-9.0
     )
 
     # Reward for closing the gripper near the object
@@ -207,8 +207,8 @@ class RewardsCfg:
 
     object_goal_smooth = RewTerm(
         func=mdp.object_goal_distance_smooth,
-        params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.04},
-        weight=10.0
+        params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.08},
+        weight=17.0
     )
 
     # action penalty
