@@ -290,7 +290,7 @@ def reward_double_contact_on_grasp(
     #print("reward: ", reward)
 
     # reward = left_force_norm + right_force_norm
-    reward = torch.clamp(left_force_norm + right_force_norm, max=3.0)
+    reward = torch.clamp(left_force_norm + right_force_norm, max=1.0)
     #print("reward: ", reward)
 
     return reward  # (num_envs,)
