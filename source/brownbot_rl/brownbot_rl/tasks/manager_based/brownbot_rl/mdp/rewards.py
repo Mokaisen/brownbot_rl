@@ -114,18 +114,19 @@ def object_goal_distance_smooth(
 
     # Euclidean distance from object to goal: (num_envs,)
     object_goal_dist = torch.norm(object_pos_w - goal_pos_w, dim=1)
-    #print(f"object goal distance: {object_goal_dist}")
+    # print(f"object goal distance: {object_goal_dist}")
 
     # Smooth reward based on distance
     reward = torch.exp(-(object_goal_dist / std))
-    #print(f"reward: {reward}")
+    # print(f"reward: {reward}")
 
     # Add bonus reward tiers for being very close to the goal
-    # reward += (object_goal_dist < 0.25) * 1.0
-    # reward += (object_goal_dist < 0.15) * 2.0
-    # reward += (object_goal_dist < 0.08) * 4.0
-    # reward += (object_goal_dist < 0.02) * 6.0
-    #print(f"reward weighted: {reward}")
+    reward += (object_goal_dist < 0.25) * 0.3
+    reward += (object_goal_dist < 0.15) * 0.3
+    reward += (object_goal_dist < 0.08) * 0.3
+    reward += (object_goal_dist < 0.02) * 0.8
+    # print(f"reward weighted: {reward}")
+    # print("########################")
 
     return (object.data.root_pos_w[:, 2] > minimal_height) * reward
 
