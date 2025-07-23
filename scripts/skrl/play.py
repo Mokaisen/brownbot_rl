@@ -213,6 +213,9 @@ def main():
             #     gripper_locked_closed = False
             #     print("🔄 Environment reset — gripper unlocked.")
 
+            ### print observations
+            # print(obs)
+
         if args_cli.video:
             timestep += 1
             # exit the play loop after recording one video
