@@ -36,38 +36,48 @@ try:
             GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
             print("[DEBUG] -> finished GaussianMixin init")
 
-            self.net = nn.Sequential(
+            self.net_container = nn.Sequential(
                 nn.Linear(self.num_observations, 256),
                 nn.ELU(),
                 nn.Linear(256, 128),
                 nn.ELU(),
                 nn.Linear(128, 64),
                 nn.ELU(),
-                nn.Linear(64, self.num_actions)
+                #nn.Linear(64, self.num_actions)
             )
+
+            self.policy_layer = nn.Linear(64, self.num_actions)
+
             self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
+            #self.model = self
+
+            self.forward = self.compute
 
         def compute(self, inputs, role):
-            return self.net(inputs["states"]), self.log_std_parameter, {}
+            x = self.net_container(inputs["states"])
+            return self.policy_layer(x)
 
     class ValueModel(Model, DeterministicMixin):
-        def __init__(self, observation_space, action_space, device, reduction="mean"):
+        def __init__(self, observation_space, action_space, device, clip_actions=False):
             print("[DEBUG] -> entering ValueModel init")
             Model.__init__(self, observation_space, action_space, device)
-            DeterministicMixin.__init__(self, reduction)
+            DeterministicMixin.__init__(self, clip_actions)
 
-            self.net = nn.Sequential(
+            self.net_container = nn.Sequential(
                 nn.Linear(self.num_observations, 256),
                 nn.ELU(),
                 nn.Linear(256, 128),
                 nn.ELU(),
                 nn.Linear(128, 64),
                 nn.ELU(),
-                nn.Linear(64, 1)  # output a single value
+                #nn.Linear(64, 1)  # output a single value
             )
 
+            self.value_layer = nn.Linear(64, 1) # output a single value
+
         def compute(self, inputs, role):
-            return self.net(inputs["states"]), {}
+            x = self.net_container(inputs["states"])
+            return self.value_layer(x), {}
 
     # --------------------------------------------
     # Change these variables as needed:
@@ -111,47 +121,101 @@ try:
         min_log_std=agent_cfg["models"]["policy"].get("min_log_std", -20.0),
         max_log_std=agent_cfg["models"]["policy"].get("max_log_std", 2.0),
     )
+    print("[INFO] Finished creating policy model")
+    policy.eval()
+    print("[INFO] Finished policy eval")
+    policy.to(DEVICE)
+    print("[INFO] moved policy model to device")
 
-    value = ValueModel(
+    # Try printing its parameters
+    for name, param in policy.named_parameters():
+        print(f"{name}: {param.shape}")
+    
+    value_model = ValueModel(
         observation_space=obs_space,
         action_space=act_space,
         device=DEVICE,
+        clip_actions=agent_cfg["models"]["value"].get("clip_actions", False)
     )
+    print("[INFO] Finsihed creating value model")
 
     models = {
         "policy": policy,
-        "value": value
+        "value": value_model
     }
+    print(f"[INFO] Finished creating models")
 
     from skrl.memories.torch import RandomMemory
     from skrl.agents.torch.ppo import PPO
 
-    memory_cfg = agent_cfg.get("memory", {})
-    memory = RandomMemory(
-        memory_size=memory_cfg.get("memory_size", 1000),
-        num_envs=memory_cfg.get("num_envs", 1),
-        device=DEVICE
-    )
+    # memory_cfg = agent_cfg.get("memory", {})
+    # memory = RandomMemory(
+    #     memory_size=memory_cfg.get("memory_size", 1000),
+    #     num_envs=memory_cfg.get("num_envs", 1),
+    #     device=DEVICE
+    # )
 
-    agent = PPO(
-        models=models,
-        memory=memory,
-        cfg=agent_cfg,
-        observation_space=obs_space,
-        action_space=act_space,
-        device=DEVICE
-    )
+    # print(f"[INFO] create PPO agent")
+    # agent = PPO(
+    #     models=models,
+    #     memory=memory,
+    #     cfg=agent_cfg,
+    #     observation_space=obs_space,
+    #     action_space=act_space,
+    #     device=DEVICE
+    # )
 
-    # Load the full agent checkpoint
-    agent.load(os.path.join(EXPERIMENT_DIR, "agent_72000.pt"))
-    print(f"[INFO] Checkpoint loaded successfully.")
+    #testing the checkpoint file
+    ckpt_path = os.path.join(EXPERIMENT_DIR, "agent_72000.pt")
+    checkpoint = torch.load(ckpt_path, map_location=DEVICE)
 
-    # Step 5: Create dummy input and export as TorchScript
+    print("Checkpoint keys:", checkpoint.keys())
+
+    # Load the policy state_dict
+    state_dict = checkpoint["policy"]
+
+    print("[DEBUG] State dict keys:", list(state_dict.keys()))
+    print("[DEBUG] Current model params:", list(policy.state_dict().keys()))
+
+    # Now try loading step-by-step
+    try:
+        policy.load_state_dict(state_dict, strict=False)
+        print("[INFO] ✅ Policy weights loaded.")
+    except Exception as e:
+        print("[ERROR] Failed to load policy state_dict:", e)
+
+    print("[INFO] Loading value checkpoint...")
+    missing, unexpected = value_model.load_state_dict(checkpoint["value"], strict=False)
+    print("[INFO] Missing keys:", missing)
+    print("[INFO] Unexpected keys:", unexpected)
+
+    # # Load the full agent checkpoint
+    # print(f"[INFO] start loading agent checkpoint")
+    # agent.load(os.path.join(EXPERIMENT_DIR, "agent_72000.pt"))
+    # print(f"[INFO] Checkpoint loaded successfully.")
+
+    # # Step 5: Create dummy input and export as TorchScript
+    # dummy_input = torch.randn(1, obs_space.shape[0], device=DEVICE)
+    # scripted_policy = torch.jit.trace(agent.policy.model, dummy_input)
+    # scripted_policy.save(os.path.join(EXPERIMENT_DIR, "policy_scripted.pt"))
+
+    # --- Export policy model ---
     dummy_input = torch.randn(1, obs_space.shape[0], device=DEVICE)
-    scripted_policy = torch.jit.trace(agent.policy.model, dummy_input)
-    scripted_policy.save(os.path.join(EXPERIMENT_DIR, "policy_scripted.pt"))
+    print("[INFO] dummy input created")
 
-    print(f"✅ TorchScript model saved to: {EXPERIMENT_DIR}/policy_scripted.pt")
+    #test policy 
+    policy.eval()
+    with torch.no_grad():
+        out = policy({"states": dummy_input})
+        print("[DEBUG] Model output:", out)
+
+    #scripted_policy = torch.jit.trace(policy,  {"states": dummy_input})
+    scripted_policy = torch.jit.script(policy)
+    print("[INFO] created scripted policy")
+    scripted_policy.save(os.path.join(EXPERIMENT_DIR, "policy_scripted.pt"))
+    print(f"✅ TorchScript policy saved to: {EXPERIMENT_DIR}/policy_scripted.pt")
+
+    # print(f"✅ TorchScript model saved to: {EXPERIMENT_DIR}/policy_scripted.pt")
 finally:
     simulation_app.close()
     exit()
