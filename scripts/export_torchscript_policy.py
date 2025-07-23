@@ -18,7 +18,7 @@ try:
 
     import gymnasium as gym
 
-    from skrl.models.torch import Model, GaussianMixin
+    from skrl.models.torch import Model, GaussianMixin, DeterministicMixin
     from isaaclab_tasks.utils import load_cfg_from_registry, parse_env_cfg
     from isaaclab_rl.skrl import SkrlVecEnvWrapper
     # from isaaclab_rl.skrl.models.torch.gaussian import GaussianPolicy
@@ -49,6 +49,25 @@ try:
 
         def compute(self, inputs, role):
             return self.net(inputs["states"]), self.log_std_parameter, {}
+
+    class ValueModel(Model, DeterministicMixin):
+        def __init__(self, observation_space, action_space, device, reduction="mean"):
+            print("[DEBUG] -> entering ValueModel init")
+            Model.__init__(self, observation_space, action_space, device)
+            DeterministicMixin.__init__(self, reduction)
+
+            self.net = nn.Sequential(
+                nn.Linear(self.num_observations, 256),
+                nn.ELU(),
+                nn.Linear(256, 128),
+                nn.ELU(),
+                nn.Linear(128, 64),
+                nn.ELU(),
+                nn.Linear(64, 1)  # output a single value
+            )
+
+        def compute(self, inputs, role):
+            return self.net(inputs["states"]), {}
 
     # --------------------------------------------
     # Change these variables as needed:
@@ -93,17 +112,43 @@ try:
         max_log_std=agent_cfg["models"]["policy"].get("max_log_std", 2.0),
     )
 
-    #initial_log_std=agent_cfg["models"]["policy"].get("initial_log_std", 0.0),
+    value = ValueModel(
+        observation_space=obs_space,
+        action_space=act_space,
+        device=DEVICE,
+    )
 
-    # Step 4: Load the trained weights
-    print(f"[INFO] Loading checkpoint: ")
-    print("checkpoint path:", os.path.join(EXPERIMENT_DIR, "agent_72000.pt"))
-    policy.load("/isaac-sim/workspaces/brownbot_rl/logs/skrl/brownbot_lift/2025-06-13_22-21-29_ppo_torch_rewardsToOne/checkpoints/agent_72000.pt")
+    models = {
+        "policy": policy,
+        "value": value
+    }
+
+    from skrl.memories.torch import RandomMemory
+    from skrl.agents.torch.ppo import PPO
+
+    memory_cfg = agent_cfg.get("memory", {})
+    memory = RandomMemory(
+        memory_size=memory_cfg.get("memory_size", 1000),
+        num_envs=memory_cfg.get("num_envs", 1),
+        device=DEVICE
+    )
+
+    agent = PPO(
+        models=models,
+        memory=memory,
+        cfg=agent_cfg,
+        observation_space=obs_space,
+        action_space=act_space,
+        device=DEVICE
+    )
+
+    # Load the full agent checkpoint
+    agent.load(os.path.join(EXPERIMENT_DIR, "agent_72000.pt"))
     print(f"[INFO] Checkpoint loaded successfully.")
 
     # Step 5: Create dummy input and export as TorchScript
     dummy_input = torch.randn(1, obs_space.shape[0], device=DEVICE)
-    scripted_policy = torch.jit.trace(policy.model, dummy_input)
+    scripted_policy = torch.jit.trace(agent.policy.model, dummy_input)
     scripted_policy.save(os.path.join(EXPERIMENT_DIR, "policy_scripted.pt"))
 
     print(f"✅ TorchScript model saved to: {EXPERIMENT_DIR}/policy_scripted.pt")
