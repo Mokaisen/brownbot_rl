@@ -57,6 +57,23 @@ try:
             x = self.net_container(inputs["states"])
             return self.policy_layer(x)
 
+    class ExportableGaussianPolicy(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.net = nn.Sequential(
+                nn.Linear(45, 256),
+                nn.ELU(),
+                nn.Linear(256, 128),
+                nn.ELU(),
+                nn.Linear(128, 64),
+                nn.ELU()
+            )
+            self.policy_layer = nn.Linear(64, 7)
+
+        def forward(self, x):
+            x = self.net(x)
+            return self.policy_layer(x)
+
     class ValueModel(Model, DeterministicMixin):
         def __init__(self, observation_space, action_space, device, clip_actions=False):
             print("[DEBUG] -> entering ValueModel init")
@@ -130,6 +147,13 @@ try:
     # Try printing its parameters
     for name, param in policy.named_parameters():
         print(f"{name}: {param.shape}")
+
+    export_model = ExportableGaussianPolicy().to(DEVICE)
+    state_dict = policy.state_dict()
+
+    # Map weights (you may need to clean up unexpected keys)
+    filtered_state_dict = {k: v for k, v in state_dict.items() if "value_layer" not in k and "log_std_parameter" not in k}
+    export_model.load_state_dict(filtered_state_dict, strict=False)
     
     value_model = ValueModel(
         observation_space=obs_space,
@@ -203,17 +227,22 @@ try:
     dummy_input = torch.randn(1, obs_space.shape[0], device=DEVICE)
     print("[INFO] dummy input created")
 
-    #test policy 
-    policy.eval()
+    export_model.eval()
     with torch.no_grad():
-        out = policy({"states": dummy_input})
-        print("[DEBUG] Model output:", out)
+        scripted = torch.jit.trace(export_model, dummy_input)
+        scripted.save("policy_scripted.pt")
+
+    #test policy 
+    # policy.eval()
+    # with torch.no_grad():
+    #     out = policy({"states": dummy_input})
+    #     print("[DEBUG] Model output:", out)
 
     #scripted_policy = torch.jit.trace(policy,  {"states": dummy_input})
-    scripted_policy = torch.jit.script(policy)
-    print("[INFO] created scripted policy")
-    scripted_policy.save(os.path.join(EXPERIMENT_DIR, "policy_scripted.pt"))
-    print(f"✅ TorchScript policy saved to: {EXPERIMENT_DIR}/policy_scripted.pt")
+    # scripted_policy = torch.jit.script(policy)
+    # print("[INFO] created scripted policy")
+    # scripted_policy.save(os.path.join(EXPERIMENT_DIR, "policy_scripted.pt"))
+    # print(f"✅ TorchScript policy saved to: {EXPERIMENT_DIR}/policy_scripted.pt")
 
     # print(f"✅ TorchScript model saved to: {EXPERIMENT_DIR}/policy_scripted.pt")
 finally:
