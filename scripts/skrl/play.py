@@ -96,6 +96,9 @@ import brownbot_rl.tasks  # noqa: F401
 # config shortcuts
 algorithm = args_cli.algorithm.lower()
 
+import numpy as np
+
+SAVE_OBS_ACTS = False # Set to True to save observations and actions in npz file
 
 def main():
     """Play with skrl agent."""
@@ -174,6 +177,11 @@ def main():
     obs, _ = env.reset()
     timestep = 0
 
+    # aux variables to collect actions and observations
+    obs_list = []
+    arm_actions_list = []
+    gripper_actions_list = []
+
     #keep gripper closed
     gripper_locked_closed = False
     # simulate environment
@@ -206,15 +214,35 @@ def main():
 
 
             # env stepping
-            obs, _, _, _, _ = env.step(actions)
-            # obs, _, terminated, truncated, _ = env.step(actions)
+            # obs, _, _, _, _ = env.step(actions)
+            obs, _, terminated, truncated, _ = env.step(actions)
 
             # if terminated[0] or truncated[0]:
             #     gripper_locked_closed = False
             #     print("🔄 Environment reset — gripper unlocked.")
 
+            ### print actions and retrieve actions and observations tensors
+            arm_actions_tensor = env.action_manager.get_term("arm_action").processed_actions
+            gripper_actions_tensor = env.action_manager.get_term("gripper_action").processed_actions
+            #print("arm_actions: ", arm_actions_tensor)
+            #print("gripper_actions: ", gripper_actions_tensor)
+
             ### print observations
-            # print(obs)
+            #print("observations: ", obs)
+
+            if SAVE_OBS_ACTS:
+                # collect actions and observations
+                obs_list.append(obs.cpu().numpy())
+                arm_actions_list.append(arm_actions_tensor.cpu().numpy())
+                gripper_actions_list.append(gripper_actions_tensor.cpu().numpy())
+
+                # finish the program after one episode
+                if terminated[0] or truncated[0]:
+                    np.savez("trajectory_data.npz",
+                        observations=np.array(obs_list),
+                        arm_actions=np.array(arm_actions_list),
+                        gripper_actions=np.array(gripper_actions_list))
+                    break
 
         if args_cli.video:
             timestep += 1
