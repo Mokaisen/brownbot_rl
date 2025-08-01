@@ -18,70 +18,18 @@ try:
 
     import gymnasium as gym
 
-    from skrl.models.torch import Model, GaussianMixin, DeterministicMixin
     from isaaclab_tasks.utils import load_cfg_from_registry, parse_env_cfg
     from isaaclab_rl.skrl import SkrlVecEnvWrapper
     from skrl.utils.runner.torch import Runner
     from typing import Tuple
-    # from isaaclab_rl.skrl.models.torch.gaussian import GaussianPolicy
-    # from skrl.models.torch.gaussian import GaussianPolicy
 
     import brownbot_rl.tasks
-
-    # --- [3] Define the GaussianPolicy based on your trained architecture ---
-    class GaussianPolicy(Model, GaussianMixin):
-        def __init__(self, observation_space, action_space, device,
-                    clip_actions=False, clip_log_std=True, min_log_std=-20, max_log_std=2, reduction="sum"):
-            print("[DEBUG] -> entering Model init")
-            Model.__init__(self, observation_space, action_space, device)
-            print("[DEBUG] -> finished Model init")
-            GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
-            print("[DEBUG] -> finished GaussianMixin init")
-
-            self.net_container = nn.Sequential(
-                nn.Linear(self.num_observations, 256),
-                nn.ELU(),
-                nn.Linear(256, 128),
-                nn.ELU(),
-                nn.Linear(128, 64),
-                nn.ELU(),
-                #nn.Linear(64, self.num_actions)
-            )
-
-            self.policy_layer = nn.Linear(64, self.num_actions)
-
-            self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
-            #self.model = self
-
-            self.forward = self.compute
-
-        def compute(self, inputs, role):
-            x = self.net_container(inputs["states"])
-            return self.policy_layer(x)
-
-    class ExportableGaussianPolicy(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.net = nn.Sequential(
-                nn.Linear(45, 256),
-                nn.ELU(),
-                nn.Linear(256, 128),
-                nn.ELU(),
-                nn.Linear(128, 64),
-                nn.ELU()
-            )
-            self.policy_layer = nn.Linear(64, 7)
-
-        def forward(self, x):
-            x = self.net(x)
-            return self.policy_layer(x)
     
     class ScriptedGaussianPolicy(nn.Module):
         def __init__(self, preprocessor, trained_policy):
             super().__init__()
             self.net = trained_policy.net_container
             self.policy_layer = trained_policy.policy_layer
-            #self.log_std = trained_policy.log_std  # Register as parameter if needed
 
             # Clone the trained log_std parameter
             self.log_std = nn.Parameter(
@@ -94,32 +42,8 @@ try:
             states_preprocessed = self.preprocessor(states)
             x = self.net(states_preprocessed)
             mean = self.policy_layer(x)
-            #std = torch.exp(self.log_std)
-            #std = std.expand_as(mean)  # Ensure shape matches
 
             return mean
-
-    class ValueModel(Model, DeterministicMixin):
-        def __init__(self, observation_space, action_space, device, clip_actions=False):
-            print("[DEBUG] -> entering ValueModel init")
-            Model.__init__(self, observation_space, action_space, device)
-            DeterministicMixin.__init__(self, clip_actions)
-
-            self.net_container = nn.Sequential(
-                nn.Linear(self.num_observations, 256),
-                nn.ELU(),
-                nn.Linear(256, 128),
-                nn.ELU(),
-                nn.Linear(128, 64),
-                nn.ELU(),
-                #nn.Linear(64, 1)  # output a single value
-            )
-
-            self.value_layer = nn.Linear(64, 1) # output a single value
-
-        def compute(self, inputs, role):
-            x = self.net_container(inputs["states"])
-            return self.value_layer(x), {}
 
     # --------------------------------------------
     # Change these variables as needed:
@@ -141,7 +65,7 @@ try:
     env = SkrlVecEnvWrapper(env,ml_framework="torch")
     print("[INFO] wrap skrl env.")
 
-    # create runner to compute some actions given some observations
+    # create runner to compute some actions given some observations taken from play.py script of skrl
     agent_cfg["trainer"]["close_environment_at_exit"] = False
     agent_cfg["agent"]["experiment"]["write_interval"] = 0  # don't log to TensorBoard
     agent_cfg["agent"]["experiment"]["checkpoint_interval"] = 0  # don't generate checkpoints
@@ -159,13 +83,11 @@ try:
     obs, _ = env.reset()
 
     print("[INFO] Environment reset.")
-    print("[Debug] obs reset: ", obs)
+    print("[Debug] obs reset: ")
+    print(obs)
 
     policy_runner = runner.agent.policy  # ← This should be the trained one
-    print("create policy_runner.")
-    # scripted_runner = torch.jit.script(policy_runner)
-    # scripted_runner.save("policy_runner.pt")
-    # print("[INFO] save policy_runner to TorchScript.")
+    print("[INFO] policy_runner created.")
 
     state_preprocessor = runner.agent._state_preprocessor
     print("[INFO] state_preprocessor: ", state_preprocessor)
@@ -188,179 +110,39 @@ try:
         dist = torch.distributions.Normal(mean, std)
         #action_mean = dist.sample()  # or dist.sample()
         action_mean = mean
-        print("[INFO] action dist.sample(): ", action_mean)
-
-    # Step 3: Reconstruct the policy model
-    obs_space = env.observation_space
-    act_space = env.action_space
-
-    print("[INFO] got obs and actions from env wraper")
-
-    print("[DEBUG] obs_space:", obs_space)
-    print("[DEBUG] act_space:", act_space)
-    print("[DEBUG] obs_space shape:", obs_space.shape)
-    print("[DEBUG] act_space shape:", act_space.shape)
-    print("[DEBUG] device:", DEVICE)
-
-    print("[DEBUG] agent_cfg[models][policy] :", agent_cfg["models"]["policy"].get("clip_actions", False))
-    policy = GaussianPolicy(
-        observation_space=obs_space,
-        action_space=act_space,
-        device=DEVICE,
-        clip_actions=agent_cfg["models"]["policy"].get("clip_actions", False),
-        clip_log_std=agent_cfg["models"]["policy"].get("clip_log_std", True),
-        min_log_std=agent_cfg["models"]["policy"].get("min_log_std", -20.0),
-        max_log_std=agent_cfg["models"]["policy"].get("max_log_std", 2.0),
-    )
-    print("[INFO] Finished creating policy model")
-    policy.eval()
-    print("[INFO] Finished policy eval")
-    policy.to(DEVICE)
-    print("[INFO] moved policy model to device")
-
-    # Try printing its parameters
-    for name, param in policy.named_parameters():
-        print(f"{name}: {param.shape}")
-
-    
-    # export_model = ExportableGaussianPolicy().to(DEVICE)
-    # state_dict = policy_runner.state_dict()
-
-    # # Map weights (you may need to clean up unexpected keys)
-    # filtered_state_dict = {k: v for k, v in state_dict.items() if "value_layer" not in k and "log_std_parameter" not in k}
-    
-    # # Rename keys to match export_model
-    # mapped_state_dict = {}
-    # for k, v in filtered_state_dict.items():
-    #     new_key = k.replace("net_container", "net")
-    #     mapped_state_dict[new_key] = v
-
-    # missing, unexpected = export_model.load_state_dict(mapped_state_dict, strict=False)
-    # print("Missing keys policy:", missing)
-    # print("Unexpected keys policy:", unexpected)
+        print("[INFO] action dist.mean: ", action_mean)
 
     print("policy_runner.net_container:")
     print(policy_runner.net_container)
-    #traced = torch.jit.trace(policy_runner.net, torch.randn(1, obs.shape[-1], device=DEVICE))
     print("[INFO] scripted policy_runner.net")
 
+    print("[INFO] policy runner modules: -------")
     print(dict(policy_runner.named_modules()).keys())
-    print("policy runner params: ")
+    print("[INFO] policy runner params: ")
     for name, param in policy_runner.named_parameters():
         print(f"{name}: {param.shape}")
 
     exportable_policy = ScriptedGaussianPolicy(state_preprocessor, policy_runner)
-    print("create exportable policy")
+    print("[INFO] create exportable policy")
 
-    value_model = ValueModel(
-        observation_space=obs_space,
-        action_space=act_space,
-        device=DEVICE,
-        clip_actions=agent_cfg["models"]["value"].get("clip_actions", False)
-    )
-    print("[INFO] Finsihed creating value model")
-
-    models = {
-        "policy": policy,
-        "value": value_model
-    }
-    print(f"[INFO] Finished creating models")
-
-    from skrl.memories.torch import RandomMemory
-    from skrl.agents.torch.ppo import PPO
-
-    # memory_cfg = agent_cfg.get("memory", {})
-    # memory = RandomMemory(
-    #     memory_size=memory_cfg.get("memory_size", 1000),
-    #     num_envs=memory_cfg.get("num_envs", 1),
-    #     device=DEVICE
-    # )
-
-    # print(f"[INFO] create PPO agent")
-    # agent = PPO(
-    #     models=models,
-    #     memory=memory,
-    #     cfg=agent_cfg,
-    #     observation_space=obs_space,
-    #     action_space=act_space,
-    #     device=DEVICE
-    # )
-
-    #testing the checkpoint file
-    ckpt_path = os.path.join(EXPERIMENT_DIR, "agent_72000.pt")
-    checkpoint = torch.load(ckpt_path, map_location=DEVICE)
-
-    print("Checkpoint keys:", checkpoint.keys())
-
-    # Load the policy state_dict
-    state_dict = checkpoint["policy"]
-
-    print("[DEBUG] State dict keys:", list(state_dict.keys()))
-    print("[DEBUG] Current model params:", list(policy.state_dict().keys()))
-
-    # Now try loading step-by-step
-    try:
-        policy.load_state_dict(state_dict, strict=False)
-        print("[INFO] ✅ Policy weights loaded.")
-    except Exception as e:
-        print("[ERROR] Failed to load policy state_dict:", e)
-
-    print("[INFO] Loading value checkpoint...")
-    missing, unexpected = value_model.load_state_dict(checkpoint["value"], strict=False)
-    print("[INFO] Missing keys:", missing)
-    print("[INFO] Unexpected keys:", unexpected)
-
-    # # Load the full agent checkpoint
-    # print(f"[INFO] start loading agent checkpoint")
-    # agent.load(os.path.join(EXPERIMENT_DIR, "agent_72000.pt"))
-    # print(f"[INFO] Checkpoint loaded successfully.")
-
-    # # Step 5: Create dummy input and export as TorchScript
-    # dummy_input = torch.randn(1, obs_space.shape[0], device=DEVICE)
-    # scripted_policy = torch.jit.trace(agent.policy.model, dummy_input)
-    # scripted_policy.save(os.path.join(EXPERIMENT_DIR, "policy_scripted.pt"))
-
-    # --- Export policy model ---
-    dummy_input = torch.randn(1, obs_space.shape[0], device=DEVICE)
-    print("[INFO] dummy input created")
-
-    #export_model.eval()
     exportable_policy.eval()
     with torch.no_grad():
-       #scripted = torch.jit.trace(export_model, dummy_input)
        scripted = torch.jit.script(exportable_policy)
        scripted.save("policy_scripted.pt")
     
     # Print a sample weight from export_model to verify it changed
+    print("[INFO] sample weight from exportable_policy: ")
     print(exportable_policy.net[0].weight.data.mean())  # Check if it's NOT close to 0
 
-    # print("keys filtered state dict: ")
-    # for k in mapped_state_dict.keys():
-    #     print(k)
-    
-    # print("keys export model state dict: ")
-    # for k in export_model.state_dict().keys():
-    #     print(k)
-
-    # print("Mean weight of first layer:", export_model.net[0].weight.data.mean())
-    # print("Std of first layer:", export_model.net[0].weight.data.std())
-    # print("First few weights:", export_model.net[0].weight.data.view(-1)[:10])
-
-    # Reload TorchScript policy
+    # Reload TorchScript policy for testing
+    print("[INFO] Reloading TorchScript policy for testing...")
     loaded_scripted_policy = torch.jit.load("policy_scripted.pt").to(DEVICE)
 
     # Compare actions
     print("obs.shape: ", obs.shape)
-    print("obs: ", obs)
+    print("obs for testing of reloaded policy: ", obs)
     with torch.inference_mode():
-        #torch.manual_seed(42)
         mean = loaded_scripted_policy(obs)
-        #std = torch.exp(log_std).expand_as(scripted_action)  # log_std can be stored separately or fixed
-        #dist = torch.distributions.Normal(scripted_action, std)
-        #print("create dist")
-        #sampled_action = dist.mean  #
-        #log_std = torch.clamp(std, -20.0, 2.0)
-        #dist = torch.distributions.Normal(mean, log_std.exp())
         scripted_action = mean
 
     # Print and compare
@@ -373,6 +155,7 @@ try:
     print("Exportable policy architecture:\n", exportable_policy)
 
     #compare weights between original and exportable policy
+    #the values to print below should be zero or very close to zero``
     for name1, param1 in policy_runner.named_parameters():
         if "value_layer" in name1 or "log_std" in name1:
             continue
@@ -384,19 +167,6 @@ try:
         else:
             print(f"⚠️ No match found for {name1}")
 
-    #test policy 
-    # policy.eval()
-    # with torch.no_grad():
-    #     out = policy({"states": dummy_input})
-    #     print("[DEBUG] Model output:", out)
-
-    #scripted_policy = torch.jit.trace(policy,  {"states": dummy_input})
-    # scripted_policy = torch.jit.script(policy)
-    # print("[INFO] created scripted policy")
-    # scripted_policy.save(os.path.join(EXPERIMENT_DIR, "policy_scripted.pt"))
-    # print(f"✅ TorchScript policy saved to: {EXPERIMENT_DIR}/policy_scripted.pt")
-
-    # print(f"✅ TorchScript model saved to: {EXPERIMENT_DIR}/policy_scripted.pt")
 finally:
     simulation_app.close()
     exit()
