@@ -162,10 +162,10 @@ class RewardsCfg:
     # )
 
     # penalize action rate only in the gripper
-    penalty_action_rate_gripper = RewTerm(
-        func=mdp.gripper_action_rate_l2,
-        weight=-1.0 #-9.0
-    )
+    # penalty_action_rate_gripper = RewTerm(
+    #     func=mdp.gripper_action_rate_l2,
+    #     weight=-1.0 #-9.0
+    # )
 
     # Reward for closing the gripper near the object
     reward_closing_near = RewTerm(
@@ -185,9 +185,9 @@ class RewardsCfg:
         weight=1.0  # adjust this weight based on reward scaling
     )
 
-    being_far_penalty = RewTerm(func=mdp.penalty_for_being_far,
-                                params={"threshold": 0.29},
-                                weight=1.0)  # Weight is applied inside the function
+    # being_far_penalty = RewTerm(func=mdp.penalty_for_being_far,
+    #                             params={"threshold": 0.29},
+    #                             weight=1.0)  # Weight is applied inside the function
 
     lifting_object = RewTerm(func=mdp.object_is_lifted, 
                              params={"minimal_height": 0.04}, 
