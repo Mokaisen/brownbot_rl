@@ -71,6 +71,24 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
             ),
         )
 
+        # Set Box as object
+        self.scene.box = RigidObjectCfg(
+            prim_path="{ENV_REGEX_NS}/Box",
+            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.055], rot=[1, 0, 0, 0]),
+            spawn=UsdFileCfg(
+                usd_path=f"{ISAAC_NUCLEUS_DIR}/IsaacLab/Mimic/nut_pour_task/nut_pour_assets/sorting_bin_blue.usd",
+                scale=(1.5, 2.0, 3.0),
+                rigid_props=RigidBodyPropertiesCfg(
+                    solver_position_iteration_count=16,
+                    solver_velocity_iteration_count=1,
+                    max_angular_velocity=1000.0,
+                    max_linear_velocity=1000.0,
+                    max_depenetration_velocity=5.0,
+                    disable_gravity=False,
+                ),
+            ),
+        )
+
         # Listens to the required transforms
         marker_cfg = FRAME_MARKER_CFG.copy()
         marker_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
@@ -121,6 +139,73 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
             filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
         )
 
+        # add contact sensors to all the robot links to detect collisions with obstacles
+        self.scene.contact_sensor_shoulder = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/shoulder_link",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
+        self.scene.contact_sensor_upper_arm = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/upper_arm_link",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
+        self.scene.contact_sensor_forearm = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/forearm_link",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
+        self.scene.contact_sensor_wrist_1 = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/wrist_1_link",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
+        self.scene.contact_sensor_wrist_2 = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/wrist_2_link",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
+        self.scene.contact_sensor_wrist_3 = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/wrist_3_link",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
+        self.scene.contact_sensor_gripper_base_link = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/robotiq_base_link",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
+        self.scene.contact_sensor_gripper_left_outer_finger = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_outer_finger",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
+        self.scene.contact_sensor_gripper_left_inner_finger = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_inner_finger",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
+        self.scene.contact_sensor_gripper_right_outer_finger = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_outer_finger",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
+        self.scene.contact_sensor_gripper_right_inner_finger = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_inner_finger",
+            update_period=0.0,
+            history_length=6,
+            debug_vis=False
+        )
 
 @configclass
 class BrownbotCubeLiftEnvCfg_PLAY(BrownbotCubeLiftEnvCfg):

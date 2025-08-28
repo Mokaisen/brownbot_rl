@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from dataclasses import MISSING
+from dataclasses import MISSING, field
 import math
 
 import isaaclab.sim as sim_utils
@@ -50,9 +50,25 @@ class BrownbotRlSceneCfg(InteractiveSceneCfg):
     # target object: will be populated by agent env cfg
     object: RigidObjectCfg | DeformableObjectCfg = MISSING
 
+    # box container
+    box: RigidObjectCfg | DeformableObjectCfg = MISSING
+
     # Add contact sensors to the fingers of the gripper
     contact_forces_LF: ContactSensorCfg = MISSING
     contact_forces_RF: ContactSensorCfg = MISSING
+
+    # add contact collision sensors for the links of the robot
+    contact_sensor_shoulder: ContactSensorCfg = MISSING
+    contact_sensor_upper_arm: ContactSensorCfg = MISSING
+    contact_sensor_forearm: ContactSensorCfg = MISSING
+    contact_sensor_wrist_1: ContactSensorCfg = MISSING
+    contact_sensor_wrist_2: ContactSensorCfg = MISSING
+    contact_sensor_wrist_3: ContactSensorCfg = MISSING
+    contact_sensor_gripper_base_link: ContactSensorCfg = MISSING
+    contact_sensor_gripper_left_outer_finger: ContactSensorCfg = MISSING
+    contact_sensor_gripper_left_inner_finger: ContactSensorCfg = MISSING
+    contact_sensor_gripper_right_outer_finger: ContactSensorCfg = MISSING
+    contact_sensor_gripper_right_inner_finger: ContactSensorCfg = MISSING
 
     # Table
     table = AssetBaseCfg(
@@ -137,6 +153,15 @@ class EventCfg:
             "pose_range": {"x": (-0.1, 0.1), "y": (-0.25, 0.25), "z": (0.0, 0.0)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("object", body_names="Object"),
+        },
+    )
+
+    reset_object_2_position = EventTerm(
+        func=mdp.reset_object_2_based_on_object,
+        mode="reset",
+        params={
+            "object_to_spawn": SceneEntityCfg("box"),
+            "object_to_follow": SceneEntityCfg("object"),
         },
     )
 
