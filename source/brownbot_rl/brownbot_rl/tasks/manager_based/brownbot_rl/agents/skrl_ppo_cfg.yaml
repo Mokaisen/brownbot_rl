@@ -45,10 +45,11 @@ agent:
   mini_batches: 4
   discount_factor: 0.99
   lambda: 0.95
-  learning_rate: 0.7e-04
+  learning_rate: 6.0e-04
   learning_rate_scheduler: KLAdaptiveLR
   learning_rate_scheduler_kwargs:
-    kl_threshold: 0.02
+    kl_threshold: 0.04
+    lr_factor: 1.8
   state_preprocessor: RunningStandardScaler
   state_preprocessor_kwargs: null
   value_preprocessor: RunningStandardScaler
@@ -66,7 +67,7 @@ agent:
   time_limit_bootstrap: False
   # logging and checkpoint
   experiment:
-    directory: "brownbot_lift"
+    directory: "brownbot_box"
     experiment_name: "rewardsToOne"
     write_interval: auto
     checkpoint_interval: auto
@@ -76,5 +77,5 @@ agent:
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 108000
+  timesteps: 200000
   environment_info: log

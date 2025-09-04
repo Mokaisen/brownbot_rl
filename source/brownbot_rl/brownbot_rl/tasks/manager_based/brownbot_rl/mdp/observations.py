@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import torch
 from typing import TYPE_CHECKING
+from torch.nn.functional import normalize
 
 from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
@@ -15,6 +16,56 @@ from isaaclab.utils.math import subtract_frame_transforms
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
+# Aux functions for observations
+def quat_to_rot_matrix(quat: torch.Tensor) -> torch.Tensor:
+    """Convert (N, 4) quaternion to (N, 3, 3) rotation matrices."""
+    q = normalize(quat, dim=-1)  # (N, 4)
+    w, x, y, z = q.unbind(-1)
+    B = quat.shape[0]
+    R = torch.zeros(B, 3, 3, device=quat.device)
+
+    R[:, 0, 0] = 1 - 2 * (y**2 + z**2)
+    R[:, 0, 1] = 2 * (x*y - z*w)
+    R[:, 0, 2] = 2 * (x*z + y*w)
+
+    R[:, 1, 0] = 2 * (x*y + z*w)
+    R[:, 1, 1] = 1 - 2 * (x**2 + z**2)
+    R[:, 1, 2] = 2 * (y*z - x*w)
+
+    R[:, 2, 0] = 2 * (x*z - y*w)
+    R[:, 2, 1] = 2 * (y*z + x*w)
+    R[:, 2, 2] = 1 - 2 * (x**2 + y**2)
+    return R
+
+def compute_walls(box_pos, box_rot, L, W, H, t):
+    """Return world centers & sizes of the 4 walls for each env."""
+    N = box_pos.shape[0]
+    R = quat_to_rot_matrix(box_rot)  # (N, 3, 3)
+
+    local_centers = torch.tensor([
+        [0,  W/2 - t/2, H/2],   # front
+        [0, -W/2 + t/2, H/2],   # back
+        [-L/2 + t/2, 0, H/2],   # left
+        [ L/2 - t/2, 0, H/2],   # right
+    ], device=box_pos.device)  # (4, 3)
+
+    sizes = torch.tensor([
+        [L, t, H],
+        [L, t, H],
+        [t, W, H],
+        [t, W, H],
+    ], device=box_pos.device)  # (4, 3)
+
+    # Broadcast local_centers across batch
+    local_centers = local_centers.unsqueeze(0).expand(N, -1, -1)  # (N, 4, 3)
+    sizes = sizes.unsqueeze(0).expand(N, -1, -1)                  # (N, 4, 3)
+
+    # Transform to world
+    world_centers = torch.bmm(local_centers, R.transpose(1, 2)) + box_pos.unsqueeze(1)  # (N, 4, 3)
+
+    return world_centers, sizes, box_rot
+
+# ### Observation functions
 
 def object_position_in_robot_root_frame(
     env: ManagerBasedRLEnv,
@@ -30,3 +81,57 @@ def object_position_in_robot_root_frame(
     )
     # print(object_pos_b)
     return object_pos_b
+
+def box_walls_positions_in_robot_frame(
+    env: ManagerBasedRLEnv,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("box"),
+) -> torch.Tensor:
+    """The positions of the 4 walls of the box in the robot's root frame."""
+    robot: RigidObject = env.scene[robot_cfg.name]
+    box: RigidObject = env.scene[object_cfg.name]
+
+    box_pos = box.data.root_pos_w[:, :3]     # (N, 3)
+    box_rot = box.data.root_quat_w[:, :4]    # (N, 4)
+
+    # Box dimensions (fixed)
+    L, W, H, t = 0.48, 0.28, 0.15, 0.02
+
+    # Get wall centers in world frame
+    wall_centers, wall_sizes, _ = compute_walls(box_pos, box_rot, L, W, H, t)  # (N, 4, 3)
+
+    # Flatten walls across envs: (N, 12)
+    wall_centers = wall_centers.reshape(env.num_envs, -1)  
+
+    # Robot frame (N, 3) -> expand to (N*4, 3)
+    robot_pos = robot.data.root_state_w[:, :3].repeat_interleave(4, dim=0)
+    robot_rot = robot.data.root_state_w[:, 3:7].repeat_interleave(4, dim=0)
+
+    # Convert to robot frame
+    wall_pos_b, _ = subtract_frame_transforms(
+        robot_pos,    # robot positions (N, 3)
+        robot_rot,   # robot quaternions (N, 4)
+        wall_centers.view(env.num_envs, 4, 3).reshape(-1, 3),  # (N*4, 3)
+    )
+
+    #change box rotation to be in robot frame as well
+    _, box_rot_b = subtract_frame_transforms(
+        robot.data.root_state_w[:, :3],   # robot pos (N, 3)
+        robot.data.root_state_w[:, 3:7],  # robot rot (N, 4)
+        box.data.root_state_w[:, :3],     # box pos (dummy, not needed)
+        box_rot,                          # box rot (N, 4)
+    )
+
+    wall_pos_b   = wall_pos_b.view(env.num_envs, -1)    # (N, 12)
+    wall_sizes_b = wall_sizes.view(env.num_envs, -1)    # (N, 12)
+    box_rot_b = box_rot_b.view(env.num_envs, -1)
+
+    # final obs
+    obs_walls = torch.cat([wall_pos_b, wall_sizes_b, box_rot_b], dim=-1)
+ 
+    # wall_pos_b is now (N*4, 3). Reshape back to (N, 12).
+    #print("box_pos: ", box_pos)
+    #print("box_rot: ", box_rot)
+    #print("wall_centers: ", wall_pos_b.view(env.num_envs, -1))
+    return obs_walls
+    #return torch.zeros(env.num_envs, wall_pos_b.numel() // env.num_envs, device=wall_pos_b.device)   # (N, 12)

@@ -72,29 +72,24 @@ def main():
         # run everything in inference mode
         with torch.inference_mode():
             # sample actions from -1 to 1
-            #actions = 2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
-            actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
-            actions[0,2] = 3.0
+            actions = 2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+            #actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
+            #actions[0,2] = 3.0
             #actions[0,-1] = -1.0
             # apply actions
-            env.step(actions)
+            obs, _, terminated, truncated, _ = env.step(actions)
 
-            # print(env)
-            # print(type(env))
-            # print(env.action_manager.get_term("arm_action").processed_actions)
-            # print(env.scene.contact_sensor_upper_arm)
-       
-            # print("Received force matrix of: ", env.scene.contact_sensor_upper_arm.data.force_matrix_w)
-            # print("Received contact force of: ", env.scene.contact_sensor_upper_arm.data.net_forces_w)
-            contact_forces_matrix = contact_sensor.data.force_matrix_w
-            contact_forces = contact_sensor.data.net_forces_w
-            contact_forces_matrix_2 = contact_sensor_2.data.force_matrix_w
-            contact_forces_2 = contact_sensor_2.data.net_forces_w
-            print("Contact force matrix at gripper base link:", contact_forces_matrix)
-            print("Contact force at gripper base link:", contact_forces)
-            print("Contact force matrix at gripper base link:", contact_forces_matrix_2)
-            print("Contact force at gripper base link:", contact_forces_2)
-            print("-------------------------------")
+            # print contact sensor info
+            # contact_forces_matrix = contact_sensor.data.force_matrix_w
+            # contact_forces = contact_sensor.data.net_forces_w
+            # contact_forces_matrix_2 = contact_sensor_2.data.force_matrix_w
+            # contact_forces_2 = contact_sensor_2.data.net_forces_w
+            # print("Contact force matrix at gripper base link:", contact_forces_matrix)
+            # print("Contact force at gripper base link:", contact_forces)
+            # print("Contact force matrix at gripper base link:", contact_forces_matrix_2)
+            # print("Contact force at gripper base link:", contact_forces_2)
+            # print("-------------------------------")
+            #print(obs)
 
     # close the simulator
     env.close()

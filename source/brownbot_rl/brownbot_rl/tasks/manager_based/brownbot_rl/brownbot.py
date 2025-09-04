@@ -34,7 +34,7 @@ BROWNBOT05_CFG = ArticulationCfg(
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         joint_pos={
-            "shoulder_pan_joint": 0.0,
+            "shoulder_pan_joint": 0.0, #-1.312
             "shoulder_lift_joint": -1.712,
             "elbow_joint": 1.712,
             "wrist_1_joint": -1.712,

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils.math import combine_frame_transforms
+from isaaclab.sensors import ContactSensor
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -60,3 +61,41 @@ def joint_velocity_exceeded(env: ManagerBasedRLEnv, velocity_threshold: float, a
     #print(joint_velocities)
 
     return torch.any(torch.abs(robot.data.joint_vel) > velocity_threshold, dim=1)
+
+def terminate_on_robot_box_collision(
+    env: ManagerBasedRLEnv,
+    sensor_gripper_1: str = "contact_sensor_gripper_base_link",
+    sensor_gripper_2: str = "contact_sensor_gripper_left_outer_finger",
+    sensor_gripper_3: str = "contact_sensor_gripper_left_inner_finger",
+    sensor_gripper_4: str = "contact_sensor_gripper_right_outer_finger",
+    sensor_gripper_5: str = "contact_sensor_gripper_right_inner_finger",
+    force_threshold: float = 1.0,
+) -> torch.Tensor:
+    """Terminate the episode if the robot collides with the box (force above threshold)."""
+
+    sensor_1: ContactSensor = env.scene[sensor_gripper_1]
+    sensor_2: ContactSensor = env.scene[sensor_gripper_2]
+    sensor_3: ContactSensor = env.scene[sensor_gripper_3]
+    sensor_4: ContactSensor = env.scene[sensor_gripper_4]
+    sensor_5: ContactSensor = env.scene[sensor_gripper_5]
+
+    # each is (num_envs, 3)
+    force_1 = sensor_1.data.net_forces_w.squeeze()
+    force_2 = sensor_2.data.net_forces_w.squeeze()
+    force_3 = sensor_3.data.net_forces_w.squeeze()
+    force_4 = sensor_4.data.net_forces_w.squeeze()
+    force_5 = sensor_5.data.net_forces_w.squeeze()
+
+    # norms (num_envs,)
+    force_1_norm = torch.norm(force_1, dim=-1)
+    force_2_norm = torch.norm(force_2, dim=-1)
+    force_3_norm = torch.norm(force_3, dim=-1)
+    force_4_norm = torch.norm(force_4, dim=-1)
+    force_5_norm = torch.norm(force_5, dim=-1)
+
+    total_force = (force_1_norm + force_2_norm + force_3_norm + force_4_norm + force_5_norm) / 100.0
+
+    # termination mask: True where force exceeds threshold
+    terminated = total_force > force_threshold
+
+    return terminated

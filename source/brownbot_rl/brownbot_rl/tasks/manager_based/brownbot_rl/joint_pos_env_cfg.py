@@ -140,71 +140,82 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
         )
 
         # add contact sensors to all the robot links to detect collisions with obstacles
-        self.scene.contact_sensor_shoulder = ContactSensorCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/ur5/shoulder_link",
-            update_period=0.0,
-            history_length=6,
-            debug_vis=False
-        )
-        self.scene.contact_sensor_upper_arm = ContactSensorCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/ur5/upper_arm_link",
-            update_period=0.0,
-            history_length=6,
-            debug_vis=False
-        )
-        self.scene.contact_sensor_forearm = ContactSensorCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/ur5/forearm_link",
-            update_period=0.0,
-            history_length=6,
-            debug_vis=False
-        )
-        self.scene.contact_sensor_wrist_1 = ContactSensorCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/ur5/wrist_1_link",
-            update_period=0.0,
-            history_length=6,
-            debug_vis=False
-        )
-        self.scene.contact_sensor_wrist_2 = ContactSensorCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/ur5/wrist_2_link",
-            update_period=0.0,
-            history_length=6,
-            debug_vis=False
-        )
-        self.scene.contact_sensor_wrist_3 = ContactSensorCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/ur5/wrist_3_link",
-            update_period=0.0,
-            history_length=6,
-            debug_vis=False
-        )
+        # self.scene.contact_sensor_shoulder = ContactSensorCfg(
+        #     prim_path="{ENV_REGEX_NS}/Robot/ur5/shoulder_link",
+        #     update_period=0.0,
+        #     history_length=6,
+        #     debug_vis=False,
+        #     filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+        # )
+        # self.scene.contact_sensor_upper_arm = ContactSensorCfg(
+        #     prim_path="{ENV_REGEX_NS}/Robot/ur5/upper_arm_link",
+        #     update_period=0.0,
+        #     history_length=6,
+        #     debug_vis=False,
+        #     filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+        # )
+        # self.scene.contact_sensor_forearm = ContactSensorCfg(
+        #     prim_path="{ENV_REGEX_NS}/Robot/ur5/forearm_link",
+        #     update_period=0.0,
+        #     history_length=6,
+        #     debug_vis=False,
+        #     filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+        # )
+        # self.scene.contact_sensor_wrist_1 = ContactSensorCfg(
+        #     prim_path="{ENV_REGEX_NS}/Robot/ur5/wrist_1_link",
+        #     update_period=0.0,
+        #     history_length=6,
+        #     debug_vis=False,
+        #     filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+        # )
+        # self.scene.contact_sensor_wrist_2 = ContactSensorCfg(
+        #     prim_path="{ENV_REGEX_NS}/Robot/ur5/wrist_2_link",
+        #     update_period=0.0,
+        #     history_length=6,
+        #     debug_vis=False,
+        #     filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+        # )
+        # self.scene.contact_sensor_wrist_3 = ContactSensorCfg(
+        #     prim_path="{ENV_REGEX_NS}/Robot/ur5/wrist_3_link",
+        #     update_period=0.0,
+        #     history_length=6,
+        #     debug_vis=False,
+        #     filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+        # )
         self.scene.contact_sensor_gripper_base_link = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/robotiq_base_link",
             update_period=0.0,
             history_length=6,
-            debug_vis=False
+            debug_vis=False,
+            filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_left_outer_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_outer_finger",
             update_period=0.0,
             history_length=6,
-            debug_vis=False
+            debug_vis=False,
+            filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_left_inner_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_inner_finger",
             update_period=0.0,
             history_length=6,
-            debug_vis=False
+            debug_vis=False,
+            filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_right_outer_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_outer_finger",
             update_period=0.0,
             history_length=6,
-            debug_vis=False
+            debug_vis=False,
+            filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_right_inner_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_inner_finger",
             update_period=0.0,
             history_length=6,
-            debug_vis=False
+            debug_vis=False,
+            filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
 
 @configclass

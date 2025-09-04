@@ -58,12 +58,12 @@ class BrownbotRlSceneCfg(InteractiveSceneCfg):
     contact_forces_RF: ContactSensorCfg = MISSING
 
     # add contact collision sensors for the links of the robot
-    contact_sensor_shoulder: ContactSensorCfg = MISSING
-    contact_sensor_upper_arm: ContactSensorCfg = MISSING
-    contact_sensor_forearm: ContactSensorCfg = MISSING
-    contact_sensor_wrist_1: ContactSensorCfg = MISSING
-    contact_sensor_wrist_2: ContactSensorCfg = MISSING
-    contact_sensor_wrist_3: ContactSensorCfg = MISSING
+    # contact_sensor_shoulder: ContactSensorCfg = MISSING
+    # contact_sensor_upper_arm: ContactSensorCfg = MISSING
+    # contact_sensor_forearm: ContactSensorCfg = MISSING
+    # contact_sensor_wrist_1: ContactSensorCfg = MISSING
+    # contact_sensor_wrist_2: ContactSensorCfg = MISSING
+    # contact_sensor_wrist_3: ContactSensorCfg = MISSING
     contact_sensor_gripper_base_link: ContactSensorCfg = MISSING
     contact_sensor_gripper_left_outer_finger: ContactSensorCfg = MISSING
     contact_sensor_gripper_left_inner_finger: ContactSensorCfg = MISSING
@@ -131,6 +131,7 @@ class ObservationsCfg:
         object_position = ObsTerm(func=mdp.object_position_in_robot_root_frame)
         target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"})
         actions = ObsTerm(func=mdp.last_action)
+        box_walls = ObsTerm(func=mdp.box_walls_positions_in_robot_frame, params={"object_cfg": SceneEntityCfg("box")})
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -230,10 +231,29 @@ class RewardsCfg:
     #     weight=30.0,
     # )
 
-    object_goal_smooth = RewTerm(
+    object_goal_distance = RewTerm(
         func=mdp.object_goal_distance_smooth,
-        params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.08},
+        params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.04},
         weight=1.0
+    )
+
+    punish_goal_distance = RewTerm(
+        func=mdp.punish_goal_distance,
+        params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.04},
+        weight=-1.0
+    )
+
+    # #penalize collisions of the robot with the box
+    robot_box_collision_penalty = RewTerm(
+        func=mdp.penalize_robot_box_collision,
+        params={
+            "sensor_gripper_1": "contact_sensor_gripper_base_link",
+            "sensor_gripper_2": "contact_sensor_gripper_left_outer_finger",
+            "sensor_gripper_3": "contact_sensor_gripper_left_inner_finger",
+            "sensor_gripper_4": "contact_sensor_gripper_right_outer_finger",
+            "sensor_gripper_5": "contact_sensor_gripper_right_inner_finger",
+        },
+        weight=-10.0  
     )
 
     # action penalty
@@ -259,6 +279,17 @@ class TerminationsCfg:
     excessive_velocity = DoneTerm(
         func=mdp.joint_velocity_exceeded, params={"velocity_threshold": 120.0, "asset_cfg": SceneEntityCfg("robot")}
     )
+
+    # robot_box_collision = DoneTerm(
+    #     func=mdp.terminate_on_robot_box_collision, params={
+    #         "sensor_gripper_1": "contact_sensor_gripper_base_link",
+    #         "sensor_gripper_2": "contact_sensor_gripper_left_outer_finger",
+    #         "sensor_gripper_3": "contact_sensor_gripper_left_inner_finger",
+    #         "sensor_gripper_4": "contact_sensor_gripper_right_outer_finger",
+    #         "sensor_gripper_5": "contact_sensor_gripper_right_inner_finger",
+    #         "force_threshold": 0.01,   # tune this value}
+    #     },
+    # )
 
 @configclass
 class CurriculumCfg:
@@ -312,7 +343,7 @@ class BrownbotRlEnvCfg(ManagerBasedRLEnvCfg):
         #self.sim.physx.bounce_threshold_velocity = 0.2
         self.sim.physx.bounce_threshold_velocity = 0.01
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
-        self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
+        self.sim.physx.gpu_total_aggregate_pairs_capacity = 64 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
 
         # added for the contact sensors to handle 4096 environments
