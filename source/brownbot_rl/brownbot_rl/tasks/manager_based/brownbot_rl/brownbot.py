@@ -15,6 +15,7 @@ from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 ##
 # Configuration
+# test private setting in github
 ##
 
 
