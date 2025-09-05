@@ -135,3 +135,17 @@ def box_walls_positions_in_robot_frame(
     #print("wall_centers: ", wall_pos_b.view(env.num_envs, -1))
     return obs_walls
     #return torch.zeros(env.num_envs, wall_pos_b.numel() // env.num_envs, device=wall_pos_b.device)   # (N, 12)
+
+def end_effector_pos_ori(
+    env: ManagerBasedRLEnv,
+    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
+) -> torch.Tensor:
+    """The position and orientation (quaternion) of the end-effector in the world frame."""
+    ee_frame: SceneEntityCfg = env.scene[ee_frame_cfg.name]
+
+    ee_pos = ee_frame.data.target_pos_w[..., 0, :]      # (N, 3)
+    ee_quat = ee_frame.data.target_quat_w[..., 0, :]     # (N, 4)
+
+    obs_ee = torch.cat([ee_pos, ee_quat], dim=-1)           # (N, 7)
+
+    return obs_ee

@@ -132,6 +132,7 @@ class ObservationsCfg:
         target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"})
         actions = ObsTerm(func=mdp.last_action)
         box_walls = ObsTerm(func=mdp.box_walls_positions_in_robot_frame, params={"object_cfg": SceneEntityCfg("box")})
+        gripper_pos_ori = ObsTerm(func=mdp.end_effector_pos_ori, params={"ee_frame_cfg": SceneEntityCfg("ee_frame")})
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -234,7 +235,7 @@ class RewardsCfg:
     object_goal_distance = RewTerm(
         func=mdp.object_goal_distance_smooth,
         params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.04},
-        weight=1.0
+        weight=3.0
     )
 
     punish_goal_distance = RewTerm(
@@ -253,15 +254,15 @@ class RewardsCfg:
             "sensor_gripper_4": "contact_sensor_gripper_right_outer_finger",
             "sensor_gripper_5": "contact_sensor_gripper_right_inner_finger",
         },
-        weight=-10.0  
+        weight=-2.0  
     )
 
     # action penalty
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1e-4) #-1e-1
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1e-4) #-1e-4 -1e-1
 
     joint_vel = RewTerm(
         func=mdp.joint_vel_l2,
-        weight=-1e-4,
+        weight=-1e-4, #-1e-4 -2.5e-2
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 

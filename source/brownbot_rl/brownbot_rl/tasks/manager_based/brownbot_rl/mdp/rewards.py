@@ -121,10 +121,10 @@ def object_goal_distance_smooth(
     # print(f"reward: {reward}")
 
     # Add bonus reward tiers for being very close to the goal
-    reward += (object_goal_dist < 0.25) * 0.3
-    reward += (object_goal_dist < 0.15) * 0.3
-    reward += (object_goal_dist < 0.08) * 0.3
-    reward += (object_goal_dist < 0.02) * 0.8
+    # reward += (object_goal_dist < 0.25) * 0.3
+    # reward += (object_goal_dist < 0.15) * 0.3
+    # reward += (object_goal_dist < 0.08) * 0.3
+    # reward += (object_goal_dist < 0.02) * 0.8
     # print(f"reward weighted: {reward}")
     # print("########################")
 
@@ -171,6 +171,7 @@ def punish_goal_distance(
     # print(f"reward weighted: {reward}")
     # print("########################")
 
+    #reward_clamp = torch.clamp(reward, max=1.0)
     return (object.data.root_pos_w[:, 2] > minimal_height) * (1.0 - reward)
     #return 1.0 - reward 
 
