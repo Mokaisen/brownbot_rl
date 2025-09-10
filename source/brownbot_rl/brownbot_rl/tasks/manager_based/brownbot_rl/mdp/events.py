@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 def reset_object_2_based_on_object(env: ManagerBasedRLEnv,
                                    env_ids: torch.Tensor, 
-                                   offset: tuple[float, float, float] = (0.0, 0.0, 0.0),
+                                   offset: tuple[float, float, float] = (0.0, 0.0, -0.05),
                                    object_to_spawn: SceneEntityCfg = SceneEntityCfg("box"),
                                    object_to_follow: SceneEntityCfg = SceneEntityCfg("object")):
     """Reset the position of object_2 based on the position of object with an offset."""    

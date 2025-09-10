@@ -383,3 +383,25 @@ def penalize_robot_box_collision(env: ManagerBasedRLEnv,
     #print("penalty: ", penalty)
 
     return penalty
+
+def joint_vel_norm(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Penalize joint velocities on the articulation using L2 squared kernel.
+
+    NOTE: Only the joints configured in :attr:`asset_cfg.joint_ids` will have their joint velocities contribute to the term.
+    """
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    vels = asset.data.joint_vel[:, asset_cfg.joint_ids]
+    penalty = torch.sum(torch.square(vels), dim=1)
+    penalty = penalty / (1.0 + penalty)
+    return penalty
+
+def action_rate_norm(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalize the rate of change of the actions using L2 squared kernel."""
+
+    diff = env.action_manager.action - env.action_manager.prev_action
+    penalty = torch.sum(torch.square(diff), dim=1)
+    penalty = penalty / (1.0 + penalty)   # → [0, 1)
+
+    return penalty

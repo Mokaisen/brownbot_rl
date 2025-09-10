@@ -146,6 +146,42 @@ def end_effector_pos_ori(
     ee_pos = ee_frame.data.target_pos_w[..., 0, :]      # (N, 3)
     ee_quat = ee_frame.data.target_quat_w[..., 0, :]     # (N, 4)
 
-    obs_ee = torch.cat([ee_pos, ee_quat], dim=-1)           # (N, 7)
+    #obs_ee = torch.cat([ee_pos, ee_quat], dim=-1)           # (N, 7)
 
-    return obs_ee
+    # Define finger offsets in gripper local frame (center points of fingers)
+    finger_sep = 0.14 / 2.0
+    finger_offsets = torch.tensor([
+        [0.0, -finger_sep, -0.03],   # left finger center
+        [0.0,  finger_sep, -0.03],   # right finger center
+    ], device=ee_pos.device, dtype=ee_pos.dtype)  # (2, 3)
+
+    # Convert quaternion to rotation matrix
+    def quat_to_rotmat(q):
+        # q: (..., 4) with (x, y, z, w)
+        x, y, z, w = q.unbind(-1)
+        B = q.shape[0]
+        rot = torch.empty(B, 3, 3, device=q.device, dtype=q.dtype)
+        rot[:, 0, 0] = 1 - 2 * (y*y + z*z)
+        rot[:, 0, 1] = 2 * (x*y - z*w)
+        rot[:, 0, 2] = 2 * (x*z + y*w)
+        rot[:, 1, 0] = 2 * (x*y + z*w)
+        rot[:, 1, 1] = 1 - 2 * (x*x + z*z)
+        rot[:, 1, 2] = 2 * (y*z - x*w)
+        rot[:, 2, 0] = 2 * (x*z - y*w)
+        rot[:, 2, 1] = 2 * (y*z + x*w)
+        rot[:, 2, 2] = 1 - 2 * (x*x + y*y)
+        return rot
+
+    rot = quat_to_rotmat(ee_quat)   # (N, 3, 3)
+
+    # Transform local finger offsets into world space
+    finger_pos = torch.einsum("bij,kj->bki", rot, finger_offsets) + ee_pos.unsqueeze(1)
+    # finger_pos: (N, 2, 3)
+
+    # Flatten finger positions into observation
+    obs_fingers = finger_pos.reshape(ee_pos.shape[0], -1)  # (N, 6)
+
+    # Concatenate: ee position + quat + fingers
+    obs = torch.cat([ee_pos, ee_quat, obs_fingers], dim=-1)  # (N, 13)
+
+    return obs

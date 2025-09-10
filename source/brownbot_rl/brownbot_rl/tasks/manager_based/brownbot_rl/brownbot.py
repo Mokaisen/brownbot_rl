@@ -25,7 +25,10 @@ BROWNBOT05_CFG = ArticulationCfg(
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             max_depenetration_velocity=5.0,
-        ),
+            rigid_body_enabled=True,
+            max_linear_velocity=1000.0,
+            max_angular_velocity=1000.0,
+        ),  
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=True,  # Default to False, adjust if needed
             solver_position_iteration_count=12, # 8
@@ -35,7 +38,7 @@ BROWNBOT05_CFG = ArticulationCfg(
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         joint_pos={
-            "shoulder_pan_joint": 0.0, #-1.312
+            "shoulder_pan_joint": -1.312, #-1.312
             "shoulder_lift_joint": -1.712,
             "elbow_joint": 1.712,
             "wrist_1_joint": -1.712,

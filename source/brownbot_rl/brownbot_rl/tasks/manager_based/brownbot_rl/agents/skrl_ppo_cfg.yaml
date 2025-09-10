@@ -4,10 +4,10 @@ seed: 42
 # Models are instantiated using skrl's model instantiator utility
 # https://skrl.readthedocs.io/en/latest/api/utils/model_instantiators.html
 models:
-  separate: False
+  separate: True
   policy:  # see gaussian_model parameters
     class: GaussianMixin
-    clip_actions: False
+    clip_actions: True
     clip_log_std: True
     min_log_std: -20.0 #-20.0
     max_log_std: 2.0 # 2.0
@@ -61,8 +61,8 @@ agent:
   ratio_clip: 0.2
   value_clip: 0.2
   clip_predicted_values: True
-  entropy_loss_scale: 0.001
-  value_loss_scale: 2.0
+  entropy_loss_scale: 0.01
+  value_loss_scale: 6.0
   kl_threshold: 0.0
   rewards_shaper_scale: 0.01 #0.01
   time_limit_bootstrap: False
@@ -78,5 +78,5 @@ agent:
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 36000
+  timesteps: 72000
   environment_info: log

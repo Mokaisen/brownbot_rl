@@ -6,7 +6,7 @@
 from isaaclab.assets import RigidObjectCfg
 from isaaclab.sensors import FrameTransformerCfg
 from isaaclab.sensors.frame_transformer.frame_transformer_cfg import OffsetCfg
-from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
+from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg, ArticulationRootPropertiesCfg
 from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
@@ -77,15 +77,30 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
             init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.055], rot=[1, 0, 0, 0]),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/IsaacLab/Mimic/nut_pour_task/nut_pour_assets/sorting_bin_blue.usd",
+                #usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/bin_mod_4.usd",
                 scale=(1.5, 2.0, 3.0),
+                activate_contact_sensors=True,
                 rigid_props=RigidBodyPropertiesCfg(
-                    solver_position_iteration_count=16,
-                    solver_velocity_iteration_count=1,
+                    # disable_gravity=False,
+                    # retain_accelerations=False,
+                    # linear_damping=0.0,
+                    # angular_damping=0.0,
+                    # max_linear_velocity=1000.0,
+                    # max_angular_velocity=1000.0,
+                    # max_depenetration_velocity=1.0,
+                    solver_position_iteration_count=4,
+                    solver_velocity_iteration_count=0,
                     max_angular_velocity=1000.0,
                     max_linear_velocity=1000.0,
                     max_depenetration_velocity=5.0,
                     disable_gravity=False,
                 ),
+                # articulation_props=ArticulationRootPropertiesCfg(
+                #     enabled_self_collisions=True,
+                #     solver_position_iteration_count=4,
+                #     solver_velocity_iteration_count=0,
+                #     fix_root_link=True,
+                # ),
             ),
         )
 
@@ -187,35 +202,35 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
             update_period=0.0,
             history_length=6,
             debug_vis=False,
-            filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+            # filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_left_outer_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_outer_finger",
             update_period=0.0,
             history_length=6,
             debug_vis=False,
-            filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+            # filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_left_inner_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_inner_finger",
             update_period=0.0,
             history_length=6,
             debug_vis=False,
-            filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+            # filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_right_outer_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_outer_finger",
             update_period=0.0,
             history_length=6,
             debug_vis=False,
-            filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+            # filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_right_inner_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_inner_finger",
             update_period=0.0,
             history_length=6,
             debug_vis=False,
-            filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+            # filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
 
 @configclass

@@ -152,7 +152,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.1, 0.1), "y": (-0.25, 0.25), "z": (0.0, 0.0)},
+            "pose_range": {"x": (-0.1, 0.1), "y": (-0.25, 0.25), "z": (0.1, 0.1)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("object", body_names="Object"),
         },
@@ -238,11 +238,11 @@ class RewardsCfg:
         weight=3.0
     )
 
-    punish_goal_distance = RewTerm(
-        func=mdp.punish_goal_distance,
-        params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.04},
-        weight=-1.0
-    )
+    # punish_goal_distance = RewTerm(
+    #     func=mdp.punish_goal_distance,
+    #     params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.04},
+    #     weight=-1.0
+    # )
 
     # #penalize collisions of the robot with the box
     robot_box_collision_penalty = RewTerm(
@@ -258,11 +258,19 @@ class RewardsCfg:
     )
 
     # action penalty
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1e-4) #-1e-4 -1e-1
+    # action_rate = RewTerm(func=mdp.action_rate_l2, weight=-6e-3) #-1e-4 -1e-1
+
+    # joint_vel = RewTerm(
+    #     func=mdp.joint_vel_l2,
+    #     weight=-8e-3, #-1e-4 -2.5e-2
+    #     params={"asset_cfg": SceneEntityCfg("robot")},
+    # )
+
+    action_rate = RewTerm(func=mdp.action_rate_norm, weight=-0.15) #-1e-4 -1e-1
 
     joint_vel = RewTerm(
-        func=mdp.joint_vel_l2,
-        weight=-1e-4, #-1e-4 -2.5e-2
+        func=mdp.joint_vel_norm,
+        weight=-0.15, #-1e-4 -2.5e-2
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
@@ -278,7 +286,11 @@ class TerminationsCfg:
     )
 
     excessive_velocity = DoneTerm(
-        func=mdp.joint_velocity_exceeded, params={"velocity_threshold": 120.0, "asset_cfg": SceneEntityCfg("robot")}
+        func=mdp.joint_velocity_exceeded, params={"velocity_threshold": 200.0, "asset_cfg": SceneEntityCfg("robot")}
+    )
+
+    excessive_action_rate = DoneTerm(
+        func=mdp.action_rate_exceeded, params={"action_threshold": 200.0}
     )
 
     # robot_box_collision = DoneTerm(
@@ -297,11 +309,11 @@ class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
     action_rate = CurrTerm(
-        func=mdp.modify_reward_weight, params={"term_name": "action_rate", "weight": -1e-1, "num_steps": 10000}
+        func=mdp.modify_reward_weight, params={"term_name": "action_rate", "weight": -0.8, "num_steps": 10000}
     )
 
     joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight, params={"term_name": "joint_vel", "weight": -2.5e-2, "num_steps": 10000}
+        func=mdp.modify_reward_weight, params={"term_name": "joint_vel", "weight": -0.8, "num_steps": 10000}
     )
 
     # reward_closing_near = CurrTerm(

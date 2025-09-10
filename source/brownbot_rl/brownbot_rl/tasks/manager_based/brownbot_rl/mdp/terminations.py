@@ -60,7 +60,26 @@ def joint_velocity_exceeded(env: ManagerBasedRLEnv, velocity_threshold: float, a
     
     #print(joint_velocities)
 
-    return torch.any(torch.abs(robot.data.joint_vel) > velocity_threshold, dim=1)
+    mask = torch.any(torch.abs(joint_velocities) > velocity_threshold, dim=1)
+
+    # if mask.any():
+    #     print("Velocity termination: ", joint_velocities[mask])
+
+    return mask
+
+def action_rate_exceeded(env: ManagerBasedRLEnv, action_threshold: float) -> torch.Tensor:
+    """Terminate when any joint velocity exceeds the threshold."""
+    #robot: RigidObject = env.scene[asset_cfg.name]
+    action = env.action_manager.action # Shape: (num_envs, num_joints)
+    prev_action = env.action_manager.prev_action
+    action_rate = torch.abs(action - prev_action)
+
+    mask = torch.any(action_rate > action_threshold, dim=1)  # shape (num_envs,)
+
+    # if mask.any():
+    #     print("action rate termination: ", action_rate[mask])
+
+    return mask
 
 def terminate_on_robot_box_collision(
     env: ManagerBasedRLEnv,
