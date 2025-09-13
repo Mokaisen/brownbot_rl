@@ -42,19 +42,35 @@ def compute_walls(box_pos, box_rot, L, W, H, t):
     N = box_pos.shape[0]
     R = quat_to_rot_matrix(box_rot)  # (N, 3, 3)
 
-    local_centers = torch.tensor([
-        [0,  W/2 - t/2, H/2],   # front
-        [0, -W/2 + t/2, H/2],   # back
-        [-L/2 + t/2, 0, H/2],   # left
-        [ L/2 - t/2, 0, H/2],   # right
-    ], device=box_pos.device)  # (4, 3)
+    # local_centers = torch.tensor([
+    #     [0,  W/2 - t/2, H/2],   # front
+    #     [0, -W/2 + t/2, H/2],   # back
+    #     [-L/2 + t/2, 0, H/2],   # left
+    #     [ L/2 - t/2, 0, H/2],   # right
+    # ], device=box_pos.device)  # (4, 3)
 
+    # sizes = torch.tensor([
+    #     [L, t, H],
+    #     [L, t, H],
+    #     [t, W, H],
+    #     [t, W, H],
+    # ], device=box_pos.device)  # (4, 3)
+
+    # Adapted for asset where X=W, Y=H, Z=L
+    local_centers = torch.tensor([
+        [ 0.0,        H/2.0,  L/2.0 - t/2.0],   # front  (+Z)
+        [ 0.0,        H/2.0, -L/2.0 + t/2.0],   # back   (-Z)
+        [-W/2.0 + t/2.0, H/2.0,  0.0      ],   # left   (-X)
+        [ W/2.0 - t/2.0, H/2.0,  0.0      ],   # right  (+X)
+    ], device=box_pos.device)  # (4,3)
+
+    # sizes: (size_x, size_y, size_z) per wall in local coords
     sizes = torch.tensor([
-        [L, t, H],
-        [L, t, H],
-        [t, W, H],
-        [t, W, H],
-    ], device=box_pos.device)  # (4, 3)
+        [ W, H,  t],    # front  : spans width (X), height (Y), thin in Z
+        [ W, H,  t],    # back
+        [ t, H,  L],    # left   : thin in X, spans height and length
+        [ t, H,  L],    # right
+    ], device=box_pos.device)  # (4,3)
 
     # Broadcast local_centers across batch
     local_centers = local_centers.unsqueeze(0).expand(N, -1, -1)  # (N, 4, 3)
@@ -95,7 +111,8 @@ def box_walls_positions_in_robot_frame(
     box_rot = box.data.root_quat_w[:, :4]    # (N, 4)
 
     # Box dimensions (fixed)
-    L, W, H, t = 0.48, 0.28, 0.15, 0.02
+    #L, W, H, t = 0.48, 0.28, 0.15, 0.02
+    L, W, H, t = 0.3974, 0.2968, 0.2574, 0.02
 
     # Get wall centers in world frame
     wall_centers, wall_sizes, _ = compute_walls(box_pos, box_rot, L, W, H, t)  # (N, 4, 3)

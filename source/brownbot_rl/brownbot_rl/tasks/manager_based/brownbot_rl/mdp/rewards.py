@@ -376,7 +376,7 @@ def penalize_robot_box_collision(env: ManagerBasedRLEnv,
     force_4_norm = torch.norm(force_4, dim=-1)
     force_5_norm = torch.norm(force_5, dim=-1)
 
-    total_force = (force_1_norm + force_2_norm + force_3_norm + force_4_norm + force_5_norm)/100.0
+    total_force = (force_1_norm + force_2_norm + force_3_norm + force_4_norm + force_5_norm)/5.0
     penalty = torch.clamp(total_force, max=1.0)
 
     #print("total_force: ", total_force)

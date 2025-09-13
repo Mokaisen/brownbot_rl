@@ -42,7 +42,15 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
                          "wrist_1_joint",
                          "wrist_2_joint",
                          "wrist_3_joint"], 
-            scale=0.2, use_default_offset=True
+            scale=0.2, use_default_offset=True,
+            # clip={
+            #     "shoulder_pan_joint": [-2.5, 2.5],
+            #     "shoulder_lift_joint": [-2.5, 2.5],
+            #     "elbow_joint": [-2.5, 2.5],
+            #     "wrist_1_joint": [-2.5, 2.5],
+            #     "wrist_2_joint": [-2.5, 2.5],
+            #     "wrist_3_joint": [-2.5, 2.5],
+            # },
         )
         self.actions.gripper_action = mdp.BinaryJointPositionActionCfg(
             asset_name="robot",
@@ -56,7 +64,7 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
         # Set Cube as object
         self.scene.object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
-            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.055], rot=[1, 0, 0, 0]),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.055], rot=[0, 0, 0, 1]),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
                 scale=(0.8, 0.8, 0.8),
@@ -74,11 +82,11 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
         # Set Box as object
         self.scene.box = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Box",
-            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.055], rot=[1, 0, 0, 0]),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.055], rot=[0, 0, 0.7071, 0.7071]),
             spawn=UsdFileCfg(
-                usd_path=f"{ISAAC_NUCLEUS_DIR}/IsaacLab/Mimic/nut_pour_task/nut_pour_assets/sorting_bin_blue.usd",
-                #usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/bin_mod_4.usd",
-                scale=(1.5, 2.0, 3.0),
+                #usd_path=f"{ISAAC_NUCLEUS_DIR}/IsaacLab/Mimic/nut_pour_task/nut_pour_assets/sorting_bin_blue.usd",
+                usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/plastic_box_7.usd",
+                scale=(1.0, 1.0, 1.0),
                 activate_contact_sensors=True,
                 rigid_props=RigidBodyPropertiesCfg(
                     # disable_gravity=False,
@@ -197,40 +205,42 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
         #     debug_vis=False,
         #     filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         # )
+
+
         self.scene.contact_sensor_gripper_base_link = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/robotiq_base_link",
             update_period=0.0,
             history_length=6,
             debug_vis=False,
-            # filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+            #filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_left_outer_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_outer_finger",
             update_period=0.0,
             history_length=6,
             debug_vis=False,
-            # filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+            #filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_left_inner_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/left_inner_finger",
             update_period=0.0,
             history_length=6,
             debug_vis=False,
-            # filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+            #filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_right_outer_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_outer_finger",
             update_period=0.0,
             history_length=6,
             debug_vis=False,
-            # filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+            #filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
         self.scene.contact_sensor_gripper_right_inner_finger = ContactSensorCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ur5/Robotiq_2F_140_physics_edit/right_inner_finger",
             update_period=0.0,
             history_length=6,
             debug_vis=False,
-            # filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
+            #filter_prim_paths_expr=["{ENV_REGEX_NS}/Box"]
         )
 
 @configclass

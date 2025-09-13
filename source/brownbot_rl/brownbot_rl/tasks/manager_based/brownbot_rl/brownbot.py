@@ -38,9 +38,9 @@ BROWNBOT05_CFG = ArticulationCfg(
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         joint_pos={
-            "shoulder_pan_joint": -1.312, #-1.312
+            "shoulder_pan_joint": 0.0, #-1.312
             "shoulder_lift_joint": -1.712,
-            "elbow_joint": 1.712,
+            "elbow_joint": 1.312,
             "wrist_1_joint": -1.712,
             "wrist_2_joint": -1.712,
             "wrist_3_joint": 0.0,
@@ -50,42 +50,42 @@ BROWNBOT05_CFG = ArticulationCfg(
     actuators={
         "arm_00": ImplicitActuatorCfg(
             joint_names_expr=["shoulder_pan_joint"],
-            velocity_limit=0.2, #1.220
+            velocity_limit=0.02, #1.220
             effort_limit=150.0,
             stiffness=261.7,
             damping=26.17,
         ),
         "arm_01": ImplicitActuatorCfg(
             joint_names_expr=["shoulder_lift_joint"],
-            velocity_limit=0.2,
+            velocity_limit=0.02,
             effort_limit=150.0,
             stiffness=261.0,
             damping=26.1,
         ),
         "arm_02": ImplicitActuatorCfg(
             joint_names_expr=["elbow_joint"],
-            velocity_limit=0.2,
+            velocity_limit=0.02,
             effort_limit=150.0,
             stiffness=261.0,
             damping=26.0,
         ),
         "arm_03": ImplicitActuatorCfg(
             joint_names_expr=["wrist_1_joint"],
-            velocity_limit=0.2,
+            velocity_limit=0.02,
             effort_limit=28.0,
             stiffness=261.0,
             damping=26.0,
         ),
         "arm_04": ImplicitActuatorCfg(
             joint_names_expr=["wrist_2_joint"],
-            velocity_limit=0.2,
+            velocity_limit=0.02,
             effort_limit=28.0,
             stiffness=261.0,
             damping=26.0,
         ),
         "arm_05": ImplicitActuatorCfg(
             joint_names_expr=["wrist_3_joint"],
-            velocity_limit=0.2,
+            velocity_limit=0.02,
             effort_limit=28.0,
             stiffness=261.0,
             damping=26.0,

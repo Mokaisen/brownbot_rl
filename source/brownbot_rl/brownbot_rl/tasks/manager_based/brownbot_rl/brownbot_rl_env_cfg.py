@@ -64,6 +64,8 @@ class BrownbotRlSceneCfg(InteractiveSceneCfg):
     # contact_sensor_wrist_1: ContactSensorCfg = MISSING
     # contact_sensor_wrist_2: ContactSensorCfg = MISSING
     # contact_sensor_wrist_3: ContactSensorCfg = MISSING
+
+
     contact_sensor_gripper_base_link: ContactSensorCfg = MISSING
     contact_sensor_gripper_left_outer_finger: ContactSensorCfg = MISSING
     contact_sensor_gripper_left_inner_finger: ContactSensorCfg = MISSING
@@ -152,7 +154,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.1, 0.1), "y": (-0.25, 0.25), "z": (0.1, 0.1)},
+            "pose_range": {"x": (-0.1, 0.1), "y": (-0.15, 0.15), "z": (0.1, 0.1)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("object", body_names="Object"),
         },
@@ -218,7 +220,7 @@ class RewardsCfg:
 
     lifting_object = RewTerm(func=mdp.object_is_lifted, 
                              params={"minimal_height": 0.04}, 
-                             weight=1.0)
+                             weight=0.08)
 
     # object_goal_tracking = RewTerm(
     #     func=mdp.object_goal_distance,
@@ -234,7 +236,7 @@ class RewardsCfg:
 
     object_goal_distance = RewTerm(
         func=mdp.object_goal_distance_smooth,
-        params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.04},
+        params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.08},
         weight=3.0
     )
 
@@ -266,11 +268,11 @@ class RewardsCfg:
     #     params={"asset_cfg": SceneEntityCfg("robot")},
     # )
 
-    action_rate = RewTerm(func=mdp.action_rate_norm, weight=-0.15) #-1e-4 -1e-1
+    action_rate = RewTerm(func=mdp.action_rate_norm, weight=-0.7) #-1e-4 -1e-1 -0.15 -0.0001
 
     joint_vel = RewTerm(
         func=mdp.joint_vel_norm,
-        weight=-0.15, #-1e-4 -2.5e-2
+        weight=-0.7, #-1e-4 -2.5e-2 -0.15 -0.0001
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
@@ -286,11 +288,11 @@ class TerminationsCfg:
     )
 
     excessive_velocity = DoneTerm(
-        func=mdp.joint_velocity_exceeded, params={"velocity_threshold": 200.0, "asset_cfg": SceneEntityCfg("robot")}
+        func=mdp.joint_velocity_exceeded, params={"velocity_threshold": 80000.0, "asset_cfg": SceneEntityCfg("robot")}
     )
 
     excessive_action_rate = DoneTerm(
-        func=mdp.action_rate_exceeded, params={"action_threshold": 200.0}
+        func=mdp.action_rate_exceeded, params={"action_threshold": 1000.0}
     )
 
     # robot_box_collision = DoneTerm(
@@ -309,11 +311,11 @@ class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
     action_rate = CurrTerm(
-        func=mdp.modify_reward_weight, params={"term_name": "action_rate", "weight": -0.8, "num_steps": 10000}
+        func=mdp.modify_reward_weight, params={"term_name": "action_rate", "weight": -0.7, "num_steps": 20000}
     )
 
     joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight, params={"term_name": "joint_vel", "weight": -0.8, "num_steps": 10000}
+        func=mdp.modify_reward_weight, params={"term_name": "joint_vel", "weight": -0.7, "num_steps": 20000}
     )
 
     # reward_closing_near = CurrTerm(
@@ -342,7 +344,7 @@ class BrownbotRlEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     events: EventCfg = EventCfg()
-    curriculum: CurriculumCfg = CurriculumCfg()
+    #curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
         """Post initialization."""
