@@ -93,18 +93,18 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
         self.scene.object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
             init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.055], rot=[0, 0, 0, 1]),
-            #spawn=sim_utils.MultiUsdFileCfg(
-            spawn=UsdFileCfg(
-                usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/dhl_box/dhl_box_flat.usd",
+            spawn=sim_utils.MultiUsdFileCfg(
+                #spawn=UsdFileCfg(
+                #usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/dhl_box/dhl_box_flat.usd",
                 #usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/tape/tape_flat_02.usd",
-                #usd_path=[
-                    #f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/tape/tape_flat_02.usd",
+                usd_path=[
+                    f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/tape/tape_flat_02.usd",
                     #f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
-                    ## f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/stanley_cup/drink_cup_flat_01.usd",
-                    #f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/wood_chisel/wood_chisel_flat.usd",
-                    #f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/dhl_box/dhl_box_flat.usd",
-                #],
-                #random_choice=True,
+                    #f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/stanley_cup/drink_cup_flat_01.usd",
+                    f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/wood_chisel/wood_chisel_flat.usd",
+                    f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/dhl_box/dhl_box_flat.usd",
+                ],
+                random_choice=True,
                 scale=(1.0, 1.0, 1.0),
                 rigid_props=RigidBodyPropertiesCfg(
                     solver_position_iteration_count=16,

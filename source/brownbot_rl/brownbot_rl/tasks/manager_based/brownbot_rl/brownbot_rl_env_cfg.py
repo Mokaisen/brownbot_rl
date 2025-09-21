@@ -93,7 +93,7 @@ class BrownbotRlSceneCfg(InteractiveSceneCfg):
     )
 
     # This flag allows the use of multiple usd objects
-    # replicate_physics = False
+    replicate_physics = False
 
 
 ##
@@ -292,11 +292,11 @@ class RewardsCfg:
     #     params={"asset_cfg": SceneEntityCfg("robot")},
     # )
 
-    action_rate = RewTerm(func=mdp.action_rate_norm, weight=-0.0001) #-1e-4 -1e-1 -0.15 -0.0001
+    action_rate = RewTerm(func=mdp.action_rate_norm, weight=-0.1) #-1e-4 -1e-1 -0.15 -0.0001
 
     joint_vel = RewTerm(
         func=mdp.joint_vel_norm,
-        weight=-0.0001, #-1e-4 -2.5e-2 -0.15 -0.0001
+        weight=-0.1, #-1e-4 -2.5e-2 -0.15 -0.0001
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
@@ -335,11 +335,11 @@ class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
     action_rate = CurrTerm(
-        func=mdp.modify_reward_weight, params={"term_name": "action_rate", "weight": -0.0001, "num_steps": 20000}
+        func=mdp.modify_reward_weight, params={"term_name": "action_rate", "weight": -0.0001, "num_steps": 54000}
     )
 
     joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight, params={"term_name": "joint_vel", "weight": -0.0001, "num_steps": 20000}
+        func=mdp.modify_reward_weight, params={"term_name": "joint_vel", "weight": -0.0001, "num_steps": 54000}
     )
 
     # reward_closing_near = CurrTerm(
@@ -368,7 +368,7 @@ class BrownbotRlEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     events: EventCfg = EventCfg()
-    #curriculum: CurriculumCfg = CurriculumCfg()
+    curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
         """Post initialization."""
