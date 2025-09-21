@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils.math import quat_mul, quat_from_euler_xyz
 
+from pxr import UsdGeom
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
@@ -46,7 +48,7 @@ def quat_to_euler_deg(q):
 
 def reset_object_2_based_on_object(env: ManagerBasedRLEnv,
                                    env_ids: torch.Tensor, 
-                                   offset: tuple[float, float, float] = (0.0, 0.0, -0.05),
+                                   offset: tuple[float, float, float] = (0.0, 0.0, -0.02),
                                    object_to_spawn: SceneEntityCfg = SceneEntityCfg("box"),
                                    object_to_follow: SceneEntityCfg = SceneEntityCfg("object"),
                                    rotation_offset: tuple[float, float, float] = (1.57, 0.0, 0.0)):
@@ -101,3 +103,34 @@ def reset_object_2_based_on_object(env: ManagerBasedRLEnv,
 
     #print("obj_pos: ", obj_pos[0].cpu().numpy())
     #print("asset_spawn pos: ", asset_spawn.data.root_pos_w[env_ids[0]].cpu().numpy())
+
+def cache_object_sizes(env: ManagerBasedRLEnv, env_ids: torch.Tensor):
+    """Cache per-env object sizes at reset."""
+
+    # return cached (and ensure it's on the correct device)
+    if hasattr(env, "_cached_object_sizes"):
+        return 
+
+    stage = env.scene.stage
+    bbox_cache = UsdGeom.BBoxCache(0, ["default"])
+    sizes = []
+    gripper_span = 0.14  # approx max span of gripper in meters
+
+    for i in range(env.num_envs):
+        prim_path = f"{env.scene.env_ns}/env_{i}/Object"   # must match your prim_path
+        prim = stage.GetPrimAtPath(prim_path)
+        bbox = bbox_cache.ComputeLocalBound(prim)
+        min_pt, max_pt = bbox.GetRange().GetMin(), bbox.GetRange().GetMax()
+        raw_sizes = [
+            (max_pt[0] - min_pt[0])/gripper_span,   # normalize by gripper span
+            (max_pt[1] - min_pt[1])/gripper_span,
+            (max_pt[2] - min_pt[2])/gripper_span,
+        ]
+
+        # clamp each value into [0, 1]
+        clamped_sizes = [min(1.0, s) for s in raw_sizes]
+
+        sizes.append(clamped_sizes)
+        #print(f"Object size (env {i}): clamped={clamped_sizes}")
+
+    env._cached_object_sizes = torch.tensor(sizes, device=env.device)

@@ -280,7 +280,7 @@ def reward_closing_when_near(
     distance = torch.norm(object.data.root_pos_w - ee.data.target_pos_w[..., 0, :], dim=1)
     gripper_action = env.action_manager.get_term(gripper_action_name).processed_actions.squeeze(-1)
 
-    is_closing = gripper_action > 0.5
+    is_closing = gripper_action > 0.50
     is_near = distance < min_distance
 
     reward = is_closing & is_near
@@ -392,16 +392,32 @@ def joint_vel_norm(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEnti
     # extract the used quantities (to enable type-hinting)
     asset: Articulation = env.scene[asset_cfg.name]
 
-    vels = asset.data.joint_vel[:, asset_cfg.joint_ids]
+    # Convert slice to an explicit tensor of indices
+    if isinstance(asset_cfg.joint_ids, slice):
+        joint_ids = list(range(asset.data.joint_vel.shape[1]))[asset_cfg.joint_ids]
+    else:
+        joint_ids = asset_cfg.joint_ids
+
+    # Take only the first 7 actuated joints
+    joint_ids = joint_ids[:7]
+
+    vels = asset.data.joint_vel[:, joint_ids]
+    #print("joint vels: ", vels)
     penalty = torch.sum(torch.square(vels), dim=1)
+    #print("vel penalty before: ", penalty)
     penalty = penalty / (1.0 + penalty)
+    #print("vel penalty after: ", penalty)
     return penalty
 
 def action_rate_norm(env: ManagerBasedRLEnv) -> torch.Tensor:
     """Penalize the rate of change of the actions using L2 squared kernel."""
 
     diff = env.action_manager.action - env.action_manager.prev_action
+    #print("action diff: ", diff)
     penalty = torch.sum(torch.square(diff), dim=1)
+    #print("penalty before: ", penalty)
     penalty = penalty / (1.0 + penalty)   # → [0, 1)
+    #print("penalty after: ", penalty)
+    #print("###########################")
 
     return penalty

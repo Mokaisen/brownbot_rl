@@ -16,6 +16,8 @@ from isaaclab_tasks.manager_based.manipulation.lift.lift_env_cfg import LiftEnvC
 
 from isaaclab.sensors import ContactSensorCfg
 
+import isaaclab.sim as sim_utils
+
 ##
 # Pre-defined configs
 ##
@@ -56,18 +58,54 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
             asset_name="robot",
             joint_names=["finger_joint"],
             open_command_expr={"finger_joint": 0.0}, #0.0
-            close_command_expr={"finger_joint": 0.57}, #0.53
+            close_command_expr={"finger_joint": 0.70}, #0.57
         )
+
+        # self.actions.gripper_action = mdp.JointPositionActionCfg(
+        #     asset_name="robot",
+        #     joint_names=["finger_joint"],
+        #     scale=0.4, use_default_offset=True,
+        #     clip={"finger_joint": [0.0, 0.72]},
+        # ) 
+
         # Set the body name for the end effector
         self.commands.object_pose.body_name = "robotiq_base_link"
 
         # Set Cube as object
+        # self.scene.object = RigidObjectCfg(
+        #     prim_path="{ENV_REGEX_NS}/Object",
+        #     init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.055], rot=[0, 0, 0, 1]),
+        #     spawn=UsdFileCfg(
+        #         usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
+        #         #usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/tape/tape.usd",
+        #         scale=(0.8, 0.8, 0.8),
+        #         rigid_props=RigidBodyPropertiesCfg(
+        #             solver_position_iteration_count=16,
+        #             solver_velocity_iteration_count=1,
+        #             max_angular_velocity=1000.0,
+        #             max_linear_velocity=1000.0,
+        #             max_depenetration_velocity=5.0,
+        #             disable_gravity=False,
+        #         ),
+        #     ),
+        # )
+
         self.scene.object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
             init_state=RigidObjectCfg.InitialStateCfg(pos=[0.5, 0, 0.055], rot=[0, 0, 0, 1]),
+            #spawn=sim_utils.MultiUsdFileCfg(
             spawn=UsdFileCfg(
-                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
-                scale=(0.8, 0.8, 0.8),
+                usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/dhl_box/dhl_box_flat.usd",
+                #usd_path=f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/tape/tape_flat_02.usd",
+                #usd_path=[
+                    #f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/tape/tape_flat_02.usd",
+                    #f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
+                    ## f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/stanley_cup/drink_cup_flat_01.usd",
+                    #f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/wood_chisel/wood_chisel_flat.usd",
+                    #f"/isaac-sim/workspaces/isaac_sim_scene/revel_assets/revel_assets/dhl_box/dhl_box_flat.usd",
+                #],
+                #random_choice=True,
+                scale=(1.0, 1.0, 1.0),
                 rigid_props=RigidBodyPropertiesCfg(
                     solver_position_iteration_count=16,
                     solver_velocity_iteration_count=1,
@@ -119,7 +157,7 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
         
         self.scene.object_frame = FrameTransformerCfg(
             prim_path="{ENV_REGEX_NS}/Object",
-            debug_vis=False,
+            debug_vis=True,
             visualizer_cfg=marker_cfg,
             target_frames=[
                 FrameTransformerCfg.FrameCfg(

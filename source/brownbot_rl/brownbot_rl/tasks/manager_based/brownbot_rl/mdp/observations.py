@@ -13,6 +13,8 @@ from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils.math import subtract_frame_transforms
 
+from pxr import Usd, UsdGeom
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
@@ -81,6 +83,74 @@ def compute_walls(box_pos, box_rot, L, W, H, t):
 
     return world_centers, sizes, box_rot
 
+def quat_to_z_axis(quat: torch.Tensor) -> torch.Tensor:
+    """
+    Convert quaternion (x, y, z, w) to the object's local z-axis (0, 0, 1) in world frame.
+    quat: (..., 4) tensor
+    returns: (..., 3) tensor
+    """
+    x, y, z, w = quat.unbind(-1)
+
+    # Rotation matrix elements (row-major)
+    R00 = 1 - 2 * (y*y + z*z)
+    R01 = 2 * (x*y - z*w)
+    R02 = 2 * (x*z + y*w)
+
+    R10 = 2 * (x*y + z*w)
+    R11 = 1 - 2 * (x*x + z*z)
+    R12 = 2 * (y*z - x*w)
+
+    R20 = 2 * (x*z - y*w)
+    R21 = 2 * (y*z + x*w)
+    R22 = 1 - 2 * (x*x + y*y)
+
+    # Local z-axis is [0, 0, 1] → world = third column of R
+    z_axis = torch.stack([R02, R12, R22], dim=-1)
+
+    # Normalize just in case
+    return normalize(z_axis, dim=-1)
+
+def quat_to_yaw_cos_sin(quat: torch.Tensor) -> torch.Tensor:
+    """
+    Convert quaternion (x, y, z, w) into [cos(yaw), sin(yaw)].
+    Assumes yaw is rotation around z-axis (object upright).
+    quat: (..., 4) tensor
+    returns: (..., 2) tensor
+    """
+    x, y, z, w = quat.unbind(-1)
+
+    # rotation matrix element for yaw
+    # yaw = atan2(2*(w*z + x*y), 1 - 2*(y*y + z*z))
+    sin_yaw = 2 * (w * z + x * y)
+    cos_yaw = 1 - 2 * (y * y + z * z)
+
+    return torch.stack([cos_yaw, sin_yaw], dim=-1)
+
+def quat_to_6d(quat: torch.Tensor) -> torch.Tensor:
+    """
+    Convert quaternion (x, y, z, w) into a 6D rotation representation
+    (first two columns of the rotation matrix).
+    
+    Args:
+        quat: (..., 4) tensor of quaternions
+    Returns:
+        (..., 6) tensor
+    """
+    x, y, z, w = quat.unbind(-1)
+
+    # rotation matrix elements
+    R = torch.stack([
+        1 - 2 * (y*y + z*z),   2 * (x*y - z*w),     2 * (x*z + y*w),
+        2 * (x*y + z*w),       1 - 2 * (x*x + z*z), 2 * (y*z - x*w),
+        2 * (x*z - y*w),       2 * (y*z + x*w),     1 - 2 * (x*x + y*y)
+    ], dim=-1).reshape(*quat.shape[:-1], 3, 3)
+
+    # take first two columns (6D rep)
+    r1 = normalize(R[..., 0], dim=-1)
+    r2 = normalize(R[..., 1], dim=-1)
+
+    return torch.cat([r1, r2], dim=-1)
+
 # ### Observation functions
 
 def object_position_in_robot_root_frame(
@@ -91,12 +161,32 @@ def object_position_in_robot_root_frame(
     """The position of the object in the robot's root frame."""
     robot: RigidObject = env.scene[robot_cfg.name]
     object: RigidObject = env.scene[object_cfg.name]
-    object_pos_w = object.data.root_pos_w[:, :3]
-    object_pos_b, _ = subtract_frame_transforms(
-        robot.data.root_state_w[:, :3], robot.data.root_state_w[:, 3:7], object_pos_w
+    
+    # object_pos_w = object.data.root_pos_w[:, :3]
+    # object_pos_b, _ = subtract_frame_transforms(
+    #     robot.data.root_state_w[:, :3], robot.data.root_state_w[:, 3:7], object_pos_w
+    # )
+    # # print(object_pos_b)
+    # return object_pos_b
+    
+    # World states
+    robot_pos_w = robot.data.root_state_w[:, :3]
+    robot_quat_w = robot.data.root_state_w[:, 3:7]
+    object_pos_w = object.data.root_state_w[:, :3]
+    object_quat_w = object.data.root_state_w[:, 3:7]
+
+    # Transform object into robot frame
+    object_pos_b, object_quat_b = subtract_frame_transforms(
+        robot_pos_w, robot_quat_w, object_pos_w, object_quat_w
     )
-    # print(object_pos_b)
-    return object_pos_b
+
+    # Return [pos, quat]
+    #z_axis_rotation = quat_to_z_axis(object_quat_b)  # (N, 3)
+    #z_axis_rotation = quat_to_yaw_cos_sin(object_quat_b)  # (N, 2)
+    quat_6d = quat_to_6d(object_quat_b)  # (N, 6)
+    obj_pos_ori = torch.cat([object_pos_b, quat_6d], dim=-1)
+    #print("obj pos ori: ", obj_pos_ori)
+    return obj_pos_ori
 
 def box_walls_positions_in_robot_frame(
     env: ManagerBasedRLEnv,
@@ -202,3 +292,43 @@ def end_effector_pos_ori(
     obs = torch.cat([ee_pos, ee_quat, obs_fingers], dim=-1)  # (N, 13)
 
     return obs
+
+
+
+def get_object_sizes(env: ManagerBasedRLEnv, object_cfg: SceneEntityCfg) -> torch.Tensor:
+    
+    # return cached (and ensure it's on the correct device)
+    if hasattr(env, "_cached_object_sizes"):
+        sizes = env._cached_object_sizes
+        if sizes.device != env.device:
+            sizes = sizes.to(env.device)
+            env._cached_object_sizes = sizes
+        #print("using cached object sizes: ", sizes)
+        return sizes
+    
+    stage = env.scene.stage
+    bbox_cache = UsdGeom.BBoxCache(0, ["default"])
+    sizes_list = []
+    gripper_span = 0.14  # approx max span of gripper in meters
+
+    for i in range(env.num_envs):
+        prim_path = f"{env.scene.env_ns}/env_{i}/Object"   # same "Object" as in prim_path
+        prim = stage.GetPrimAtPath(prim_path)
+        bbox = bbox_cache.ComputeLocalBound(prim)
+        min_pt, max_pt = bbox.GetRange().GetMin(), bbox.GetRange().GetMax()
+        raw_sizes = [
+            (max_pt[0] - min_pt[0])/gripper_span,   # normalize by gripper span
+            (max_pt[1] - min_pt[1])/gripper_span,
+            (max_pt[2] - min_pt[2])/gripper_span,
+        ]
+
+        # clamp each value into [0, 1]
+        clamped_sizes = [min(1.0, s) for s in raw_sizes]
+
+        sizes_list.append(clamped_sizes)
+        #print(f"Object size (env {i}): raw={raw_sizes}, clamped={clamped_sizes}")
+
+    #print("create cache of sizes ##############################")
+    sizes = torch.tensor(sizes_list, device=env.device)
+    env._cached_object_sizes = sizes
+    return sizes

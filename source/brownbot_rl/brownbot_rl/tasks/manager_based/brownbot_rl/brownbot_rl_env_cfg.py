@@ -92,6 +92,9 @@ class BrownbotRlSceneCfg(InteractiveSceneCfg):
         spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
     )
 
+    # This flag allows the use of multiple usd objects
+    # replicate_physics = False
+
 
 ##
 # MDP settings
@@ -107,7 +110,8 @@ class CommandsCfg:
         resampling_time_range=(5.0, 5.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(0.4, 0.6), pos_y=(-0.25, 0.25), pos_z=(0.25, 0.5), roll=(1.57, 1.57), pitch=(-1.57, -1.57), yaw=(1.57,1.57)
+            #pos_x=(0.4, 0.6), pos_y=(-0.25, 0.25), pos_z=(0.25, 0.5), roll=(1.57, 1.57), pitch=(-1.57, -1.57), yaw=(1.57,1.57)
+            pos_x=(0.5, 0.5), pos_y=(0.0, 0.0), pos_z=(0.50, 0.50), roll=(1.57, 1.57), pitch=(-1.57, -1.57), yaw=(1.57,1.57)
         ),
     )
 
@@ -118,6 +122,7 @@ class ActionsCfg:
     # will be set by agent env cfg
     arm_action: mdp.JointPositionActionCfg | mdp.DifferentialInverseKinematicsActionCfg = MISSING
     gripper_action: mdp.BinaryJointPositionActionCfg = MISSING
+    #gripper_action: mdp.JointPositionActionCfg = MISSING
 
 
 @configclass
@@ -131,10 +136,13 @@ class ObservationsCfg:
         joint_pos = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel = ObsTerm(func=mdp.joint_vel_rel)
         object_position = ObsTerm(func=mdp.object_position_in_robot_root_frame)
+        object_size_obs = ObsTerm(func=mdp.get_object_sizes, params={"object_cfg": SceneEntityCfg("object")})
         target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"})
         actions = ObsTerm(func=mdp.last_action)
         box_walls = ObsTerm(func=mdp.box_walls_positions_in_robot_frame, params={"object_cfg": SceneEntityCfg("box")})
         gripper_pos_ori = ObsTerm(func=mdp.end_effector_pos_ori, params={"ee_frame_cfg": SceneEntityCfg("ee_frame")})
+
+        #object_size_obs = ObsTerm(func=mdp.get_object_sizes, params={"object_cfg": SceneEntityCfg("object")})
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -148,13 +156,24 @@ class ObservationsCfg:
 class EventCfg:
     """Configuration for events."""
 
-    reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
+    # Example: scale the "Object" in the scene
+    # randomize_object_scale = EventTerm(
+    #     func=mdp.randomize_rigid_body_scale,
+    #     mode="usd",   # must be "usd" since it edits prim attributes before simulation
+    #     params={
+    #         "scale_range": {"x": (0.8, 1.9), "y": (0.9, 1.6), "z": (0.7, 4.0)},   # per axis scaling
+    #         "asset_cfg": SceneEntityCfg("object"),  # matches the name used in scene config
+    #         "relative_child_path": None,  # optional
+    #     },
+    # )
 
+    reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
+    
     reset_object_position = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.1, 0.1), "y": (-0.15, 0.15), "z": (0.1, 0.1)},
+            "pose_range": {"x": (-0.1, 0.1), "y": (-0.15, 0.15), "z": (0.1, 0.1), "yaw": (-0.2,0.2)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("object", body_names="Object"),
         },
@@ -167,6 +186,11 @@ class EventCfg:
             "object_to_spawn": SceneEntityCfg("box"),
             "object_to_follow": SceneEntityCfg("object"),
         },
+    )
+
+    reset_object_sizes = EventTerm(
+        func=mdp.cache_object_sizes,
+        mode="reset",
     )
 
 
@@ -200,7 +224,7 @@ class RewardsCfg:
     reward_closing_near = RewTerm(
         func=mdp.reward_closing_when_near,
         params={"min_distance": 0.056, "gripper_action_name": "gripper_action"},
-        weight=1.0,
+        weight=2.0,
     )
 
     # Reward for having contact with the object and the gripper
@@ -211,7 +235,7 @@ class RewardsCfg:
             "left_sensor_name": "contact_forces_LF",
             "right_sensor_name": "contact_forces_RF",
         },
-        weight=1.0  # adjust this weight based on reward scaling
+        weight=2.0  # adjust this weight based on reward scaling
     )
 
     # being_far_penalty = RewTerm(func=mdp.penalty_for_being_far,
@@ -219,8 +243,8 @@ class RewardsCfg:
     #                             weight=1.0)  # Weight is applied inside the function
 
     lifting_object = RewTerm(func=mdp.object_is_lifted, 
-                             params={"minimal_height": 0.04}, 
-                             weight=0.08)
+                             params={"minimal_height": 0.08}, 
+                             weight=1.0)
 
     # object_goal_tracking = RewTerm(
     #     func=mdp.object_goal_distance,
@@ -268,11 +292,11 @@ class RewardsCfg:
     #     params={"asset_cfg": SceneEntityCfg("robot")},
     # )
 
-    action_rate = RewTerm(func=mdp.action_rate_norm, weight=-0.7) #-1e-4 -1e-1 -0.15 -0.0001
+    action_rate = RewTerm(func=mdp.action_rate_norm, weight=-0.0001) #-1e-4 -1e-1 -0.15 -0.0001
 
     joint_vel = RewTerm(
         func=mdp.joint_vel_norm,
-        weight=-0.7, #-1e-4 -2.5e-2 -0.15 -0.0001
+        weight=-0.0001, #-1e-4 -2.5e-2 -0.15 -0.0001
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
@@ -292,7 +316,7 @@ class TerminationsCfg:
     )
 
     excessive_action_rate = DoneTerm(
-        func=mdp.action_rate_exceeded, params={"action_threshold": 1000.0}
+        func=mdp.action_rate_exceeded, params={"action_threshold": 3000.0}
     )
 
     # robot_box_collision = DoneTerm(
@@ -311,11 +335,11 @@ class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
     action_rate = CurrTerm(
-        func=mdp.modify_reward_weight, params={"term_name": "action_rate", "weight": -0.7, "num_steps": 20000}
+        func=mdp.modify_reward_weight, params={"term_name": "action_rate", "weight": -0.0001, "num_steps": 20000}
     )
 
     joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight, params={"term_name": "joint_vel", "weight": -0.7, "num_steps": 20000}
+        func=mdp.modify_reward_weight, params={"term_name": "joint_vel", "weight": -0.0001, "num_steps": 20000}
     )
 
     # reward_closing_near = CurrTerm(
