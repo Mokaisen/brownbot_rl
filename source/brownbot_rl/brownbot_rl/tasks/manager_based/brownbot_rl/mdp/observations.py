@@ -186,7 +186,9 @@ def object_position_in_robot_root_frame(
     quat_6d = quat_to_6d(object_quat_b)  # (N, 6)
     obj_pos_ori = torch.cat([object_pos_b, quat_6d], dim=-1)
     #print("obj pos ori: ", obj_pos_ori)
+    #print("obj quat: ", object_quat_b)
     return obj_pos_ori
+    #return object_pos_b
 
 def box_walls_positions_in_robot_frame(
     env: ManagerBasedRLEnv,
@@ -240,6 +242,7 @@ def box_walls_positions_in_robot_frame(
     #print("box_pos: ", box_pos)
     #print("box_rot: ", box_rot)
     #print("wall_centers: ", wall_pos_b.view(env.num_envs, -1))
+    #print("wall_sizes: ", wall_sizes_b)
     return obs_walls
     #return torch.zeros(env.num_envs, wall_pos_b.numel() // env.num_envs, device=wall_pos_b.device)   # (N, 12)
 
@@ -290,6 +293,10 @@ def end_effector_pos_ori(
 
     # Concatenate: ee position + quat + fingers
     obs = torch.cat([ee_pos, ee_quat, obs_fingers], dim=-1)  # (N, 13)
+
+    #print("ee_pos: ", ee_pos)
+    #print("ee_quat: ", ee_quat)
+    #print("obs_fingers: ", obs_fingers)
 
     return obs
 

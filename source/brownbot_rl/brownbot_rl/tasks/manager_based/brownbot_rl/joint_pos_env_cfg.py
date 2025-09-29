@@ -157,7 +157,7 @@ class BrownbotCubeLiftEnvCfg(BrownbotRlEnvCfg):
         
         self.scene.object_frame = FrameTransformerCfg(
             prim_path="{ENV_REGEX_NS}/Object",
-            debug_vis=True,
+            debug_vis=False,
             visualizer_cfg=marker_cfg,
             target_frames=[
                 FrameTransformerCfg.FrameCfg(

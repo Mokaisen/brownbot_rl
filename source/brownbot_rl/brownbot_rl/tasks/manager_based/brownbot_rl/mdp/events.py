@@ -102,6 +102,8 @@ def reset_object_2_based_on_object(env: ManagerBasedRLEnv,
     asset_spawn.write_root_velocity_to_sim(new_vel, env_ids=env_ids)
 
     #print("obj_pos: ", obj_pos[0].cpu().numpy())
+    #print("obj_pos event: ", obj_pos)
+    #print("box pos event: ", new_pose)
     #print("asset_spawn pos: ", asset_spawn.data.root_pos_w[env_ids[0]].cpu().numpy())
 
 def cache_object_sizes(env: ManagerBasedRLEnv, env_ids: torch.Tensor):

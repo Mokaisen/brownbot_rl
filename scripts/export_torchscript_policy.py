@@ -51,7 +51,7 @@ try:
     ALGORITHM = "ppo"
     #DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
-    EXPERIMENT_DIR = "/isaac-sim/workspaces/brownbot_rl/logs/skrl/brownbot_lift/2025-06-13_22-21-29_ppo_torch_rewardsToOne/checkpoints"
+    EXPERIMENT_DIR = "/isaac-sim/workspaces/brownbot_rl/logs/skrl/brownbot_box_02/2025-09-21_11-34-34_ppo_torch_rewardsToOne/checkpoints"
     # --------------------------------------------
 
     # Step 1: Load environment config and agent config
@@ -73,7 +73,7 @@ try:
     print("[INFO] Runner created.")
 
     #testing the checkpoint file
-    ckpt_path = os.path.join(EXPERIMENT_DIR, "agent_72000.pt")
+    ckpt_path = os.path.join(EXPERIMENT_DIR, "agent_108000.pt")
 
     print(f"[INFO] Loading model checkpoint from: {ckpt_path}")
     runner.agent.load(ckpt_path)
