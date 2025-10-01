@@ -53,26 +53,43 @@ def main():
     # reset environment
     env.reset()
 
-    joint_stiffness = env.scene["robot"].data.joint_stiffness
-    joint_names = env.scene["robot"].data.joint_names
-    print(f"joint stiffness: {joint_stiffness}")
-    print(f"joint names: {joint_names}")
+    #joint_stiffness = env.scene["robot"].data.joint_stiffness
+    #joint_names = env.scene["robot"].data.joint_names
+    #print(f"joint stiffness: {joint_stiffness}")
+    #print(f"joint names: {joint_names}")
 
     # for joint in env.scene["robot"].actuators["arm_06"].joints:
     #     if "finger" in joint.name:
     #         print(f"{joint.name}: stiffness={joint.drive.stiffness}, damping={joint.drive.damping}")
+
+    isaac_env = env.unwrapped
+    # Access the sensor handle
+    contact_sensor = isaac_env.scene.sensors["contact_sensor_gripper_right_inner_finger"]
+    contact_sensor_2 = isaac_env.scene.sensors["contact_sensor_gripper_right_outer_finger"]
 
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
             # sample actions from -1 to 1
-            actions = 2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
-            #actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
-            #actions[0,4] = -360.0
-            #actions[0,-1] = -1.0
+            #actions = 2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+            actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
+            #actions[0,2] = 3.0
+            actions[0,-1] = 3.5
             # apply actions
-            env.step(actions)
+            obs, _, terminated, truncated, _ = env.step(actions)
+
+            # print contact sensor info
+            # contact_forces_matrix = contact_sensor.data.force_matrix_w
+            # contact_forces = contact_sensor.data.net_forces_w
+            # contact_forces_matrix_2 = contact_sensor_2.data.force_matrix_w
+            # contact_forces_2 = contact_sensor_2.data.net_forces_w
+            # print("Contact force matrix at gripper base link:", contact_forces_matrix)
+            # print("Contact force at gripper base link:", contact_forces)
+            # print("Contact force matrix at gripper base link:", contact_forces_matrix_2)
+            # print("Contact force at gripper base link:", contact_forces_2)
+            # print("-------------------------------")
+            #print(obs)
 
     # close the simulator
     env.close()

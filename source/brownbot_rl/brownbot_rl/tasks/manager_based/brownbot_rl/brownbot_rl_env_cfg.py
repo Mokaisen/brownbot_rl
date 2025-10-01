@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-from dataclasses import MISSING
+from dataclasses import MISSING, field
 import math
 
 import isaaclab.sim as sim_utils
@@ -50,9 +50,27 @@ class BrownbotRlSceneCfg(InteractiveSceneCfg):
     # target object: will be populated by agent env cfg
     object: RigidObjectCfg | DeformableObjectCfg = MISSING
 
+    # box container
+    box: RigidObjectCfg | DeformableObjectCfg = MISSING
+
     # Add contact sensors to the fingers of the gripper
     contact_forces_LF: ContactSensorCfg = MISSING
     contact_forces_RF: ContactSensorCfg = MISSING
+
+    # add contact collision sensors for the links of the robot
+    # contact_sensor_shoulder: ContactSensorCfg = MISSING
+    # contact_sensor_upper_arm: ContactSensorCfg = MISSING
+    # contact_sensor_forearm: ContactSensorCfg = MISSING
+    # contact_sensor_wrist_1: ContactSensorCfg = MISSING
+    # contact_sensor_wrist_2: ContactSensorCfg = MISSING
+    # contact_sensor_wrist_3: ContactSensorCfg = MISSING
+
+
+    contact_sensor_gripper_base_link: ContactSensorCfg = MISSING
+    contact_sensor_gripper_left_outer_finger: ContactSensorCfg = MISSING
+    contact_sensor_gripper_left_inner_finger: ContactSensorCfg = MISSING
+    contact_sensor_gripper_right_outer_finger: ContactSensorCfg = MISSING
+    contact_sensor_gripper_right_inner_finger: ContactSensorCfg = MISSING
 
     # Table
     table = AssetBaseCfg(
@@ -74,6 +92,9 @@ class BrownbotRlSceneCfg(InteractiveSceneCfg):
         spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
     )
 
+    # This flag allows the use of multiple usd objects
+    replicate_physics = False
+
 
 ##
 # MDP settings
@@ -89,7 +110,8 @@ class CommandsCfg:
         resampling_time_range=(5.0, 5.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(0.4, 0.6), pos_y=(-0.25, 0.25), pos_z=(0.25, 0.5), roll=(1.57, 1.57), pitch=(-1.57, -1.57), yaw=(1.57,1.57)
+            #pos_x=(0.4, 0.6), pos_y=(-0.25, 0.25), pos_z=(0.25, 0.5), roll=(1.57, 1.57), pitch=(-1.57, -1.57), yaw=(1.57,1.57)
+            pos_x=(0.5, 0.5), pos_y=(0.0, 0.0), pos_z=(0.50, 0.50), roll=(1.57, 1.57), pitch=(-1.57, -1.57), yaw=(1.57,1.57)
         ),
     )
 
@@ -100,6 +122,7 @@ class ActionsCfg:
     # will be set by agent env cfg
     arm_action: mdp.JointPositionActionCfg | mdp.DifferentialInverseKinematicsActionCfg = MISSING
     gripper_action: mdp.BinaryJointPositionActionCfg = MISSING
+    #gripper_action: mdp.JointPositionActionCfg = MISSING
 
 
 @configclass
@@ -113,8 +136,13 @@ class ObservationsCfg:
         joint_pos = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel = ObsTerm(func=mdp.joint_vel_rel)
         object_position = ObsTerm(func=mdp.object_position_in_robot_root_frame)
+        object_size_obs = ObsTerm(func=mdp.get_object_sizes, params={"object_cfg": SceneEntityCfg("object")})
         target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"})
         actions = ObsTerm(func=mdp.last_action)
+        box_walls = ObsTerm(func=mdp.box_walls_positions_in_robot_frame, params={"object_cfg": SceneEntityCfg("box")})
+        gripper_pos_ori = ObsTerm(func=mdp.end_effector_pos_ori, params={"ee_frame_cfg": SceneEntityCfg("ee_frame")})
+
+        #object_size_obs = ObsTerm(func=mdp.get_object_sizes, params={"object_cfg": SceneEntityCfg("object")})
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -128,16 +156,41 @@ class ObservationsCfg:
 class EventCfg:
     """Configuration for events."""
 
-    reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
+    # Example: scale the "Object" in the scene
+    # randomize_object_scale = EventTerm(
+    #     func=mdp.randomize_rigid_body_scale,
+    #     mode="usd",   # must be "usd" since it edits prim attributes before simulation
+    #     params={
+    #         "scale_range": {"x": (0.8, 1.9), "y": (0.9, 1.6), "z": (0.7, 4.0)},   # per axis scaling
+    #         "asset_cfg": SceneEntityCfg("object"),  # matches the name used in scene config
+    #         "relative_child_path": None,  # optional
+    #     },
+    # )
 
+    reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
+    
     reset_object_position = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.1, 0.1), "y": (-0.25, 0.25), "z": (0.0, 0.0)},
+            "pose_range": {"x": (-0.1, 0.1), "y": (-0.15, 0.15), "z": (0.1, 0.1), "yaw": (-0.2,0.2)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("object", body_names="Object"),
         },
+    )
+
+    reset_object_2_position = EventTerm(
+        func=mdp.reset_object_2_based_on_object,
+        mode="reset",
+        params={
+            "object_to_spawn": SceneEntityCfg("box"),
+            "object_to_follow": SceneEntityCfg("object"),
+        },
+    )
+
+    reset_object_sizes = EventTerm(
+        func=mdp.cache_object_sizes,
+        mode="reset",
     )
 
 
@@ -171,7 +224,7 @@ class RewardsCfg:
     reward_closing_near = RewTerm(
         func=mdp.reward_closing_when_near,
         params={"min_distance": 0.056, "gripper_action_name": "gripper_action"},
-        weight=1.0,
+        weight=2.0,
     )
 
     # Reward for having contact with the object and the gripper
@@ -182,7 +235,7 @@ class RewardsCfg:
             "left_sensor_name": "contact_forces_LF",
             "right_sensor_name": "contact_forces_RF",
         },
-        weight=1.0  # adjust this weight based on reward scaling
+        weight=2.0  # adjust this weight based on reward scaling
     )
 
     # being_far_penalty = RewTerm(func=mdp.penalty_for_being_far,
@@ -190,7 +243,7 @@ class RewardsCfg:
     #                             weight=1.0)  # Weight is applied inside the function
 
     lifting_object = RewTerm(func=mdp.object_is_lifted, 
-                             params={"minimal_height": 0.04}, 
+                             params={"minimal_height": 0.08}, 
                              weight=1.0)
 
     # object_goal_tracking = RewTerm(
@@ -205,18 +258,45 @@ class RewardsCfg:
     #     weight=30.0,
     # )
 
-    object_goal_smooth = RewTerm(
+    object_goal_distance = RewTerm(
         func=mdp.object_goal_distance_smooth,
         params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.08},
-        weight=1.0
+        weight=3.0
+    )
+
+    # punish_goal_distance = RewTerm(
+    #     func=mdp.punish_goal_distance,
+    #     params={"std":0.2, "command_name": "object_pose", "minimal_height": 0.04},
+    #     weight=-1.0
+    # )
+
+    # #penalize collisions of the robot with the box
+    robot_box_collision_penalty = RewTerm(
+        func=mdp.penalize_robot_box_collision,
+        params={
+            "sensor_gripper_1": "contact_sensor_gripper_base_link",
+            "sensor_gripper_2": "contact_sensor_gripper_left_outer_finger",
+            "sensor_gripper_3": "contact_sensor_gripper_left_inner_finger",
+            "sensor_gripper_4": "contact_sensor_gripper_right_outer_finger",
+            "sensor_gripper_5": "contact_sensor_gripper_right_inner_finger",
+        },
+        weight=-2.0  
     )
 
     # action penalty
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1e-4) #-1e-1
+    # action_rate = RewTerm(func=mdp.action_rate_l2, weight=-6e-3) #-1e-4 -1e-1
+
+    # joint_vel = RewTerm(
+    #     func=mdp.joint_vel_l2,
+    #     weight=-8e-3, #-1e-4 -2.5e-2
+    #     params={"asset_cfg": SceneEntityCfg("robot")},
+    # )
+
+    action_rate = RewTerm(func=mdp.action_rate_norm, weight=-0.1) #-1e-4 -1e-1 -0.15 -0.0001
 
     joint_vel = RewTerm(
-        func=mdp.joint_vel_l2,
-        weight=-1e-4,
+        func=mdp.joint_vel_norm,
+        weight=-0.1, #-1e-4 -2.5e-2 -0.15 -0.0001
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
@@ -232,19 +312,34 @@ class TerminationsCfg:
     )
 
     excessive_velocity = DoneTerm(
-        func=mdp.joint_velocity_exceeded, params={"velocity_threshold": 120.0, "asset_cfg": SceneEntityCfg("robot")}
+        func=mdp.joint_velocity_exceeded, params={"velocity_threshold": 80000.0, "asset_cfg": SceneEntityCfg("robot")}
     )
+
+    excessive_action_rate = DoneTerm(
+        func=mdp.action_rate_exceeded, params={"action_threshold": 3000.0}
+    )
+
+    # robot_box_collision = DoneTerm(
+    #     func=mdp.terminate_on_robot_box_collision, params={
+    #         "sensor_gripper_1": "contact_sensor_gripper_base_link",
+    #         "sensor_gripper_2": "contact_sensor_gripper_left_outer_finger",
+    #         "sensor_gripper_3": "contact_sensor_gripper_left_inner_finger",
+    #         "sensor_gripper_4": "contact_sensor_gripper_right_outer_finger",
+    #         "sensor_gripper_5": "contact_sensor_gripper_right_inner_finger",
+    #         "force_threshold": 0.01,   # tune this value}
+    #     },
+    # )
 
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
     action_rate = CurrTerm(
-        func=mdp.modify_reward_weight, params={"term_name": "action_rate", "weight": -1e-1, "num_steps": 10000}
+        func=mdp.modify_reward_weight, params={"term_name": "action_rate", "weight": -0.0001, "num_steps": 54000}
     )
 
     joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight, params={"term_name": "joint_vel", "weight": -2.5e-2, "num_steps": 10000}
+        func=mdp.modify_reward_weight, params={"term_name": "joint_vel", "weight": -0.0001, "num_steps": 54000}
     )
 
     # reward_closing_near = CurrTerm(
@@ -287,7 +382,7 @@ class BrownbotRlEnvCfg(ManagerBasedRLEnvCfg):
         #self.sim.physx.bounce_threshold_velocity = 0.2
         self.sim.physx.bounce_threshold_velocity = 0.01
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
-        self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
+        self.sim.physx.gpu_total_aggregate_pairs_capacity = 64 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
 
         # added for the contact sensors to handle 4096 environments

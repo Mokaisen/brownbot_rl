@@ -121,14 +121,59 @@ def object_goal_distance_smooth(
     # print(f"reward: {reward}")
 
     # Add bonus reward tiers for being very close to the goal
-    reward += (object_goal_dist < 0.25) * 0.3
-    reward += (object_goal_dist < 0.15) * 0.3
-    reward += (object_goal_dist < 0.08) * 0.3
-    reward += (object_goal_dist < 0.02) * 0.8
+    # reward += (object_goal_dist < 0.25) * 0.3
+    # reward += (object_goal_dist < 0.15) * 0.3
+    # reward += (object_goal_dist < 0.08) * 0.3
+    # reward += (object_goal_dist < 0.02) * 0.8
     # print(f"reward weighted: {reward}")
     # print("########################")
 
-    return (object.data.root_pos_w[:, 2] > minimal_height) * reward
+    return (object.data.root_pos_w[:, 2] > minimal_height) * (reward)
+    #return 1.0 - reward 
+
+def punish_goal_distance(
+    env: ManagerBasedRLEnv,
+    std: float,
+    command_name: str,
+    minimal_height: float,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+) -> torch.Tensor:
+    """Reward the agent based on how close the object is to the goal position using smooth exponential + bonus thresholds."""
+    object: RigidObject = env.scene[object_cfg.name]
+    command = env.command_manager.get_command(command_name)
+    robot: RigidObject = env.scene[robot_cfg.name]
+
+    # Final desired goal position in world frame (x, y, z)
+    goal_pos_b = command[:, :3]  # shape: (num_envs, 3)
+    goal_pos_w, _ = combine_frame_transforms(
+        robot.data.root_state_w[:, :3],  # robot position
+        robot.data.root_state_w[:, 3:7],  # robot orientation (quaternion)
+        goal_pos_b
+    )
+
+    # Current object position in world frame
+    object_pos_w = object.data.root_pos_w[:, :3]
+
+    # Euclidean distance from object to goal: (num_envs,)
+    object_goal_dist = torch.norm(object_pos_w - goal_pos_w, dim=1)
+    # print(f"object goal distance: {object_goal_dist}")
+
+    # Smooth reward based on distance
+    reward = torch.exp(-(object_goal_dist / std))
+    # print(f"reward: {reward}")
+
+    # Add bonus reward tiers for being very close to the goal
+    # reward += (object_goal_dist < 0.25) * 0.3
+    # reward += (object_goal_dist < 0.15) * 0.3
+    # reward += (object_goal_dist < 0.08) * 0.3
+    # reward += (object_goal_dist < 0.02) * 0.8
+    # print(f"reward weighted: {reward}")
+    # print("########################")
+
+    #reward_clamp = torch.clamp(reward, max=1.0)
+    return (object.data.root_pos_w[:, 2] > minimal_height) * (1.0 - reward)
+    #return 1.0 - reward 
 
 def penalize_closing_when_far(
     env: ManagerBasedRLEnv,
@@ -235,7 +280,7 @@ def reward_closing_when_near(
     distance = torch.norm(object.data.root_pos_w - ee.data.target_pos_w[..., 0, :], dim=1)
     gripper_action = env.action_manager.get_term(gripper_action_name).processed_actions.squeeze(-1)
 
-    is_closing = gripper_action > 0.5
+    is_closing = gripper_action > 0.50
     is_near = distance < min_distance
 
     reward = is_closing & is_near
@@ -304,3 +349,75 @@ def gripper_action_rate_l2(env: ManagerBasedRLEnv) -> torch.Tensor:
     reward = torch.square(gripper_curr - gripper_prev)
     #print(f"penalty action rate: {reward}")
     return reward
+
+def penalize_robot_box_collision(env: ManagerBasedRLEnv,
+    sensor_gripper_1: str = "contact_sensor_gripper_base_link",
+    sensor_gripper_2: str = "contact_sensor_gripper_left_outer_finger",
+    sensor_gripper_3: str = "contact_sensor_gripper_left_inner_finger",
+    sensor_gripper_4: str = "contact_sensor_gripper_right_outer_finger",
+    sensor_gripper_5: str = "contact_sensor_gripper_right_inner_finger",) -> torch.Tensor:
+    """Penalize the agent if the robot is in contact with the box """
+
+    sensor_1: ContactSensor = env.scene[sensor_gripper_1]
+    sensor_2: ContactSensor = env.scene[sensor_gripper_2]
+    sensor_3: ContactSensor = env.scene[sensor_gripper_3]
+    sensor_4: ContactSensor = env.scene[sensor_gripper_4]
+    sensor_5: ContactSensor = env.scene[sensor_gripper_5]
+
+    force_1 = sensor_1.data.net_forces_w.squeeze()   # (num_envs,)
+    force_2 = sensor_2.data.net_forces_w.squeeze()   # (num_envs,)
+    force_3 = sensor_3.data.net_forces_w.squeeze()   # (num_envs,)
+    force_4 = sensor_4.data.net_forces_w.squeeze()   # (num_envs,)
+    force_5 = sensor_5.data.net_forces_w.squeeze()   # (num
+    
+    force_1_norm = torch.norm(force_1, dim=-1)
+    force_2_norm = torch.norm(force_2, dim=-1)
+    force_3_norm = torch.norm(force_3, dim=-1)
+    force_4_norm = torch.norm(force_4, dim=-1)
+    force_5_norm = torch.norm(force_5, dim=-1)
+
+    total_force = (force_1_norm + force_2_norm + force_3_norm + force_4_norm + force_5_norm)/5.0
+    penalty = torch.clamp(total_force, max=1.0)
+
+    #print("total_force: ", total_force)
+    #print("penalty: ", penalty)
+
+    return penalty
+
+def joint_vel_norm(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+    """Penalize joint velocities on the articulation using L2 squared kernel.
+
+    NOTE: Only the joints configured in :attr:`asset_cfg.joint_ids` will have their joint velocities contribute to the term.
+    """
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    # Convert slice to an explicit tensor of indices
+    if isinstance(asset_cfg.joint_ids, slice):
+        joint_ids = list(range(asset.data.joint_vel.shape[1]))[asset_cfg.joint_ids]
+    else:
+        joint_ids = asset_cfg.joint_ids
+
+    # Take only the first 7 actuated joints
+    joint_ids = joint_ids[:7]
+
+    vels = asset.data.joint_vel[:, joint_ids]
+    #print("joint vels: ", vels)
+    penalty = torch.sum(torch.square(vels), dim=1)
+    #print("vel penalty before: ", penalty)
+    penalty = penalty / (1.0 + penalty)
+    #print("vel penalty after: ", penalty)
+    return penalty
+
+def action_rate_norm(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalize the rate of change of the actions using L2 squared kernel."""
+
+    diff = env.action_manager.action - env.action_manager.prev_action
+    #print("action diff: ", diff)
+    penalty = torch.sum(torch.square(diff), dim=1)
+    #print("penalty before: ", penalty)
+    penalty = penalty / (1.0 + penalty)   # → [0, 1)
+    #print("penalty after: ", penalty)
+    #print("###########################")
+
+    return penalty
