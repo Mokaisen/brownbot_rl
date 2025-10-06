@@ -75,7 +75,8 @@ def main():
             #actions = 2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
             actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
             #actions[0,2] = 3.0
-            actions[0,-1] = 3.5
+            #actions[0,-1] = 3.5
+            actions[0,-1] = 0.70
             # apply actions
             obs, _, terminated, truncated, _ = env.step(actions)
 

@@ -223,7 +223,8 @@ class RewardsCfg:
     # Reward for closing the gripper near the object
     reward_closing_near = RewTerm(
         func=mdp.reward_closing_when_near,
-        params={"min_distance": 0.056, "gripper_action_name": "gripper_action"},
+        params={"min_distance": 0.056, "gripper_action_name": "gripper_action",
+                "asset_cfg": SceneEntityCfg("robot")},
         weight=2.0,
     )
 

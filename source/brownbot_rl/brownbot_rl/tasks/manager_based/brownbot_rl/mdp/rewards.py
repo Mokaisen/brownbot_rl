@@ -273,18 +273,48 @@ def reward_closing_when_near(
     gripper_action_name: str = "gripper_action",
     object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
     ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
+    # object = env.scene[object_cfg.name]
+    # ee = env.scene[ee_frame_cfg.name]
+
+    # distance = torch.norm(object.data.root_pos_w - ee.data.target_pos_w[..., 0, :], dim=1)
+    # gripper_action = env.action_manager.get_term(gripper_action_name).processed_actions.squeeze(-1)
+
+    # is_closing = gripper_action > 0.50
+    # is_near = distance < min_distance
+
+    # reward = is_closing & is_near
+    # print("reward closing when near: ", reward)
+    # print("gripper action: ", gripper_action)
+
+    ###########################################################
+    ##### Compute the position of the gripper joint ###########
+    ###########################################################
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    # Convert slice to an explicit tensor of indices
+    if isinstance(asset_cfg.joint_ids, slice):
+        joint_ids = list(range(asset.data.joint_vel.shape[1]))[asset_cfg.joint_ids]
+    else:
+        joint_ids = asset_cfg.joint_ids
+
+    # Take only the first 7 actuated joints
+    joint_ids = joint_ids[:7]
+
+    position_gripper = asset.data.joint_pos[:, joint_ids[-1]]  # Assuming the last joint is the gripper joint
+    #print("position gripper: ", position_gripper)
+
     object = env.scene[object_cfg.name]
     ee = env.scene[ee_frame_cfg.name]
 
     distance = torch.norm(object.data.root_pos_w - ee.data.target_pos_w[..., 0, :], dim=1)
-    gripper_action = env.action_manager.get_term(gripper_action_name).processed_actions.squeeze(-1)
 
-    is_closing = gripper_action > 0.50
     is_near = distance < min_distance
 
-    reward = is_closing & is_near
-    return reward.float() * 1.0
+    #return reward.float() * 1.0
+    return torch.where(is_near, position_gripper*2.0, 0.0)
 
 def penalty_for_being_far(
     env: ManagerBasedRLEnv,
@@ -335,9 +365,10 @@ def reward_double_contact_on_grasp(
     #print("reward shape: ", reward.shape)
     #print("reward: ", reward)
 
-    # reward = left_force_norm + right_force_norm
-    reward = torch.clamp(left_force_norm + right_force_norm, max=1.0)
-    #print("reward: ", reward)
+    reward_temp = (left_force_norm + right_force_norm)/40.0
+    #print("reward double contact temp: ", reward_temp)
+    reward = torch.clamp(reward_temp, max=1.0)
+    #print("reward double contact: ", reward)
 
     return reward  # (num_envs,)
 
