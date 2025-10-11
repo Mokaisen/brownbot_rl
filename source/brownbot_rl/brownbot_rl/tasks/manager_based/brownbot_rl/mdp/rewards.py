@@ -314,7 +314,9 @@ def reward_closing_when_near(
     is_near = distance < min_distance
 
     #return reward.float() * 1.0
-    return torch.where(is_near, position_gripper*2.0, 0.0)
+    reward = torch.where(is_near, position_gripper*2.0, 0.0)
+    #print("closing gripper reward: ", reward)
+    return reward
 
 def penalty_for_being_far(
     env: ManagerBasedRLEnv,
@@ -368,6 +370,7 @@ def reward_double_contact_on_grasp(
     reward_temp = (left_force_norm + right_force_norm)/40.0
     #print("reward double contact temp: ", reward_temp)
     reward = torch.clamp(reward_temp, max=1.0)
+    #reward = torch.clamp(left_force_norm + right_force_norm, max=1.0)
     #print("reward double contact: ", reward)
 
     return reward  # (num_envs,)
@@ -449,6 +452,45 @@ def action_rate_norm(env: ManagerBasedRLEnv) -> torch.Tensor:
     #print("penalty before: ", penalty)
     penalty = penalty / (1.0 + penalty)   # → [0, 1)
     #print("penalty after: ", penalty)
+    #print("###########################")
+
+    return penalty
+
+def moving_bin_penalty(env: ManagerBasedRLEnv, asset_name: str = "box") -> torch.Tensor:
+    """Penalize the agent if the bin is moved from its initial position."""
+    if not hasattr(env, "_initial_bin_pos"):
+        return torch.zeros((env.num_envs,), device=env.device)
+
+    bin_pos = env.scene[asset_name].data.root_pos_w  # (num_envs, 3)
+    bin_quat = env.scene[asset_name].data.root_quat_w  # (num_envs, 4)
+
+    pos_diff = torch.norm(bin_pos - env._initial_bin_pos, dim=1)  # (num_envs,)
+    # Compute orientation difference in radians
+    dot_product = torch.sum(bin_quat * env._initial_bin_quat, dim=1).clamp(-1.0, 1.0)
+    angle_diff = 2 * torch.acos(torch.abs(dot_product))  # (num_envs,)
+    # quat_diff = quat_mul(current_quat, quat_inv(self.initial_box_quat))
+    # angle_diff = 2 * torch.acos(torch.clamp(quat_diff[:, 3], -1.0, 1.0))
+
+    # # Combine position and orientation differences into a single penalty
+    # penalty = pos_diff + angle_diff
+    # penalty = penalty / (1.0 + penalty)  # Normalize to [0, 1)
+
+    max_pos_diff = 0.30      # 30 cm
+    max_angle_diff = 1.57    # 30 degrees in radians
+
+    # Normalize and clamp to [0, 1]
+    pos_norm = torch.clamp(pos_diff / max_pos_diff, 0.0, 1.0)
+    angle_norm = torch.clamp(angle_diff / max_angle_diff, 0.0, 1.0)
+
+    # Combined penalty (weighted)
+    penalty = 0.5 * pos_norm + 0.5 * angle_norm
+
+    #sanity check
+    # print("Initial box pos:", env._initial_bin_pos)
+    # print("Current box pos:", bin_pos)
+    # print("pos norm:", pos_norm)
+    # print("angle norm:", angle_norm)
+    #print("moving bin penalty:", penalty)
     #print("###########################")
 
     return penalty

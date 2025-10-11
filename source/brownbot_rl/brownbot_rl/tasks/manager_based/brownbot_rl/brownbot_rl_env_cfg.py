@@ -293,12 +293,18 @@ class RewardsCfg:
     #     params={"asset_cfg": SceneEntityCfg("robot")},
     # )
 
-    action_rate = RewTerm(func=mdp.action_rate_norm, weight=-0.1) #-1e-4 -1e-1 -0.15 -0.0001
+    action_rate = RewTerm(func=mdp.action_rate_norm, weight=-0.0001) #-1e-4 -1e-1 -0.15 -0.0001
 
     joint_vel = RewTerm(
         func=mdp.joint_vel_norm,
-        weight=-0.1, #-1e-4 -2.5e-2 -0.15 -0.0001
+        weight=-0.0001, #-1e-4 -2.5e-2 -0.15 -0.0001
         params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+    move_bin_penalty = RewTerm(
+        func=mdp.moving_bin_penalty,
+        weight=-0.5,
+        params={"asset_name": "box"},
     )
 
 
@@ -369,7 +375,7 @@ class BrownbotRlEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     events: EventCfg = EventCfg()
-    curriculum: CurriculumCfg = CurriculumCfg()
+    #curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
         """Post initialization."""

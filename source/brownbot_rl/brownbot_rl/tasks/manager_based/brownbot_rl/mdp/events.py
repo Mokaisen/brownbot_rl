@@ -106,6 +106,17 @@ def reset_object_2_based_on_object(env: ManagerBasedRLEnv,
     #print("box pos event: ", new_pose)
     #print("asset_spawn pos: ", asset_spawn.data.root_pos_w[env_ids[0]].cpu().numpy())
 
+    # Initialize storage if not existing
+    if not hasattr(env, "_initial_box_pos"):
+        num_envs = env.num_envs
+        device = asset_spawn.data.root_pos_w.device
+        env._initial_bin_pos = torch.zeros((num_envs, 3), device=device)
+        env._initial_bin_quat = torch.zeros((num_envs, 4), device=device)
+
+    # Store the initial pose for the reset environments
+    env._initial_bin_pos[env_ids] = asset_spawn.data.root_pos_w[env_ids].clone()
+    env._initial_bin_quat[env_ids] = asset_spawn.data.root_quat_w[env_ids].clone()
+
 def cache_object_sizes(env: ManagerBasedRLEnv, env_ids: torch.Tensor):
     """Cache per-env object sizes at reset."""
 
